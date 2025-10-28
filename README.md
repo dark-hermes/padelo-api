@@ -16,7 +16,7 @@ Before you begin, ensure you have the following installed on your local machine:
 First, clone the project repository to your local machine.
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/dark-hermes/padelo-api.git
 cd padelo-api
 ```
 
