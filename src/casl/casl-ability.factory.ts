@@ -8,7 +8,17 @@ import {
 } from '@casl/ability';
 import { PrismaQuery } from '@casl/prisma';
 import { Injectable } from '@nestjs/common';
-import { Permission, Prisma, Role, User } from '@prisma/client';
+import {
+  Permission,
+  Prisma,
+  Product,
+  ProductCategory,
+  ProductImage,
+  ProductVariant,
+  Role,
+  Team,
+  User,
+} from '@prisma/client';
 
 // Define Actions and Subjects
 export enum Action {
@@ -21,7 +31,24 @@ export enum Action {
 
 // Explicitly type Subjects - using string literals since Prisma types are not classes
 export type Subjects =
-  | InferSubjects<User | Role | Permission | 'User' | 'Role' | 'Permission'>
+  | InferSubjects<
+      | User
+      | Role
+      | Permission
+      | Team
+      | Product
+      | ProductCategory
+      | ProductVariant
+      | ProductImage
+      | 'User'
+      | 'Role'
+      | 'Permission'
+      | 'Team'
+      | 'Product'
+      | 'ProductCategory'
+      | 'ProductVariant'
+      | 'ProductImage'
+    >
   | 'all';
 export type AppAbility = Ability<[Action, Subjects], PrismaQuery>;
 

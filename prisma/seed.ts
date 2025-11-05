@@ -26,6 +26,26 @@ async function main() {
     { action: 'read', subject: 'Role' },
     { action: 'update', subject: 'Role' },
     { action: 'delete', subject: 'Role' },
+    // Product Permissions
+    { action: 'create', subject: 'Product' },
+    { action: 'read', subject: 'Product' },
+    { action: 'update', subject: 'Product' },
+    { action: 'delete', subject: 'Product' },
+    // ProductCategory Permissions
+    { action: 'create', subject: 'ProductCategory' },
+    { action: 'read', subject: 'ProductCategory' },
+    { action: 'update', subject: 'ProductCategory' },
+    { action: 'delete', subject: 'ProductCategory' },
+    // ProductVariant Permissions
+    { action: 'create', subject: 'ProductVariant' },
+    { action: 'read', subject: 'ProductVariant' },
+    { action: 'update', subject: 'ProductVariant' },
+    { action: 'delete', subject: 'ProductVariant' },
+    // ProductImage Permissions
+    { action: 'create', subject: 'ProductImage' },
+    { action: 'read', subject: 'ProductImage' },
+    { action: 'update', subject: 'ProductImage' },
+    { action: 'delete', subject: 'ProductImage' },
     // Additional permissions can be added here
 
     // All permission (for admin)

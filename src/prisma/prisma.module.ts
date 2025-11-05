@@ -15,8 +15,11 @@ if (process.env.TEST_DATABASE_URL) {
     // Attempt to load the generated test wrapper. If present, use it as the
     // module provider so the rest of the app (and tests) receive the test
     // client when TEST_DATABASE_URL is configured.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
+    // Allow require here because we need a synchronous, optional load of the
+    // generated test wrapper at module-evaluation time. Using dynamic import
+    // would be asynchronous and run after the @Module decorator is evaluated.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-require-imports
     const { PrismaTestService } = require('./prisma-test.service');
     if (PrismaTestService) {
       providers[0] = PrismaTestService as unknown as typeof PrismaService;

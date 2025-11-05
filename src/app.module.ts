@@ -11,9 +11,11 @@ import './auth/jwt-service.compat';
 import { BaseUrlMiddleware } from './common/middleware/base-url.middleware';
 import { MaintenanceMiddleware } from './common/middleware/maintenance.middleware';
 import { PermissionsModule } from './permissions/permissions.module';
+import { ProductsModule } from './products/products.module';
 import { ProfileModule } from './profile/profile.module';
 import { RolesModule } from './roles/roles.module';
 import { SettingsModule } from './settings/settings.module';
+import { TeamsModule } from './teams/teams.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -36,6 +38,8 @@ import { UsersModule } from './users/users.module';
     PermissionsModule,
     ProfileModule,
     SettingsModule,
+    TeamsModule,
+    ProductsModule,
   ],
   providers: [
     // JwtService provider left as provided by JwtModule. We keep the compat

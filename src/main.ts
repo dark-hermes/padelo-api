@@ -21,6 +21,8 @@ async function bootstrap() {
     credentials: true,
   });
 
+  app.setGlobalPrefix('api/v1');
+
   const config = new DocumentBuilder()
     .setTitle('Padelo API Documentation')
     .setDescription('Dokumentasi lengkap untuk API Padelo.')
