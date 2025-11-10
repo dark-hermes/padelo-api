@@ -9,6 +9,7 @@ import {
 import { PrismaQuery } from '@casl/prisma';
 import { Injectable } from '@nestjs/common';
 import {
+  Address,
   Permission,
   Prisma,
   Product,
@@ -40,6 +41,7 @@ export type Subjects =
       | ProductCategory
       | ProductVariant
       | ProductImage
+      | Address
       | 'User'
       | 'Role'
       | 'Permission'
@@ -48,6 +50,7 @@ export type Subjects =
       | 'ProductCategory'
       | 'ProductVariant'
       | 'ProductImage'
+      | 'Address'
     >
   | 'all';
 export type AppAbility = Ability<[Action, Subjects], PrismaQuery>;
