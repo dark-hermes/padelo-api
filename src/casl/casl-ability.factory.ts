@@ -16,6 +16,9 @@ import {
   ProductCategory,
   ProductImage,
   ProductVariant,
+  Landing,
+  LandingReview,
+  LandingVideo,
   Role,
   Team,
   User,
@@ -41,6 +44,9 @@ export type Subjects =
       | ProductCategory
       | ProductVariant
       | ProductImage
+      | Landing
+      | LandingReview
+      | LandingVideo
       | Address
       | 'User'
       | 'Role'
@@ -50,6 +56,10 @@ export type Subjects =
       | 'ProductCategory'
       | 'ProductVariant'
       | 'ProductImage'
+      | 'Landing'
+  | 'LandingImageProduct'
+      | 'LandingReview'
+      | 'LandingVideo'
       | 'Address'
     >
   | 'all';

@@ -138,6 +138,67 @@ async function main() {
     });
   }
 
+  // 8. Seed Landing page and related data
+  // Clean existing landing data first
+  try {
+    await prisma.landingReview.deleteMany();
+  } catch (e) {
+    // ignore if table doesn't exist in older schemas
+  }
+  try {
+    await (prisma as any).landingImageProduct.deleteMany();
+  } catch (e) {
+    // ignore
+  }
+  try {
+    await prisma.landingVideo.deleteMany();
+  } catch (e) {
+    // ignore
+  }
+  try {
+    await prisma.landing.deleteMany();
+  } catch (e) {
+    // ignore
+  }
+
+  const landing = await (prisma as any).landing.create({
+    data: {
+      title: 'Welcome to Padelo',
+      content: '<p>Some HTML content</p>',
+      reviews: {
+        create: [
+          {
+            name: 'John Doe',
+            comment: 'Amazing service!',
+            rating: 5,
+          },
+        ],
+      },
+      imagesProduct: {
+        create: [
+          {
+            url: '/uploads/landing/image1.jpg',
+            title: 'Hero image',
+            description: null,
+            // price is required in the model; use 0.00 as default
+            price: '0.00',
+          },
+        ],
+      },
+      videos: {
+        create: [
+          {
+            url: 'https://youtu.be/abcd',
+            title: 'Intro video',
+          },
+        ],
+      },
+    },
+    include: { reviews: true, imagesProduct: true, videos: true },
+  });
+
+  console.log('Seeded landing:', landing.title);
+
   console.log('Database seeding complete.');
 }
 

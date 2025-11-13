@@ -18,6 +18,7 @@ import { SettingsModule } from './settings/settings.module';
 import { TeamsModule } from './teams/teams.module';
 import { UsersModule } from './users/users.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { LandingModule } from './landing/landing.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AddressesModule } from './addresses/addresses.module';
     TeamsModule,
     ProductsModule,
     AddressesModule,
+    LandingModule,
   ],
   providers: [
     // JwtService provider left as provided by JwtModule. We keep the compat
