@@ -76,7 +76,6 @@ describe('Products Module (e2e)', () => {
         .set('Cookie', [`access_token=${accessToken}`])
         .send({
           name: 'Electronics',
-          slug: 'electronics',
         })
         .expect(201);
       const body = response.body as unknown as {
@@ -129,7 +128,6 @@ describe('Products Module (e2e)', () => {
         .set('Cookie', [`access_token=${accessToken}`])
         .send({
           name: 'Smartphone X',
-          slug: 'smartphone-x',
           pageContent: {
             sections: [
               {

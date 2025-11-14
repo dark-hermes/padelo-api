@@ -14,6 +14,7 @@ import {
   createPrismaOrderByClause,
   createPrismaWhereClause,
 } from 'src/common/utils/prisma-helpers';
+import { generateUniqueSlug } from 'src/common/utils/slug.util';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -27,15 +28,14 @@ export class ProductsService {
 
   // Product CRUD operations
   async createProduct(createProductDto: CreateProductDto): Promise<Product> {
-    const existingSlug = await this.prisma.product.findUnique({
-      where: { slug: createProductDto.slug },
+    // Always generate slug from product name (ignore any provided slug)
+    const baseName = createProductDto.name || 'product';
+    const slug = await generateUniqueSlug(baseName, async (candidate) => {
+      const found = await this.prisma.product.findUnique({
+        where: { slug: candidate },
+      });
+      return Boolean(found);
     });
-
-    if (existingSlug) {
-      throw new ConflictException(
-        `Product with slug "${createProductDto.slug}" already exists.`,
-      );
-    }
 
     if (createProductDto.categoryId) {
       const category = await this.prisma.productCategory.findUnique({
@@ -49,8 +49,17 @@ export class ProductsService {
       }
     }
 
+    // Ensure we don't use slug from DTO; merge generated slug into data
+    const dataWithoutSlug = (() => {
+      const copy = {
+        ...(createProductDto as unknown as Record<string, unknown>),
+      };
+      if ('slug' in copy) delete copy.slug;
+      return copy as unknown as Omit<CreateProductDto, 'slug'>;
+    })();
+
     return await this.prisma.product.create({
-      data: createProductDto,
+      data: { ...dataWithoutSlug, slug },
       include: {
         category: true,
         variants: {
@@ -122,19 +131,30 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID "${id}" not found.`);
     }
 
-    if (updateProductDto.slug) {
-      const slugExists = await this.prisma.product.findFirst({
-        where: {
-          slug: updateProductDto.slug,
-          NOT: { id },
-        },
-      });
+    // Slug is generated automatically. Ignore any provided slug value.
+    const updateWithoutSlug = (() => {
+      const copy = {
+        ...(updateProductDto as unknown as Record<string, unknown>),
+      };
+      if ('slug' in copy) delete copy.slug;
+      return copy as unknown as Partial<UpdateProductDto>;
+    })();
 
-      if (slugExists) {
-        throw new ConflictException(
-          `Product with slug "${updateProductDto.slug}" already exists.`,
-        );
-      }
+    // If name is being updated, regenerate slug based on new name
+    let slugToSet: string | undefined = undefined;
+    if (updateProductDto.name) {
+      slugToSet = await generateUniqueSlug(
+        updateProductDto.name,
+        async (candidate) => {
+          const found = await this.prisma.product.findFirst({
+            where: {
+              slug: candidate,
+              NOT: { id },
+            },
+          });
+          return Boolean(found);
+        },
+      );
     }
 
     if (updateProductDto.categoryId) {
@@ -149,9 +169,13 @@ export class ProductsService {
       }
     }
 
+    const updateData = slugToSet
+      ? { ...updateWithoutSlug, slug: slugToSet }
+      : updateWithoutSlug;
+
     return await this.prisma.product.update({
       where: { id },
-      data: updateProductDto,
+      data: updateData,
       include: {
         category: true,
         variants: {

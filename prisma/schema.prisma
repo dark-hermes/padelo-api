@@ -91,10 +91,11 @@ model Team {
 }
 
 model Product {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  slug        String @unique
+  slug        String  @unique
   pageContent Json
+  coverImage  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

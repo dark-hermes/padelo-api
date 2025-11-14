@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProductCategory } from '@prisma/client';
 import { FilterSearchQueryDto } from 'src/common/dto/filter-search-query.dto';
 import { PaginatedResponse } from 'src/common/interfaces/pagination.interface';
@@ -12,6 +8,7 @@ import {
   createPrismaOrderByClause,
   createPrismaWhereClause,
 } from 'src/common/utils/prisma-helpers';
+import { generateUniqueSlug } from 'src/common/utils/slug.util';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductCategoryDto } from './dto/create-product-category.dto';
 import { UpdateProductCategoryDto } from './dto/update-product-category.dto';
@@ -23,18 +20,25 @@ export class ProductCategoriesService {
   async create(
     createProductCategoryDto: CreateProductCategoryDto,
   ): Promise<ProductCategory> {
-    const existing = await this.prisma.productCategory.findUnique({
-      where: { slug: createProductCategoryDto.slug },
+    // Always generate slug from category name (ignore provided slug)
+    const baseName = createProductCategoryDto.name || 'category';
+    const slug = await generateUniqueSlug(baseName, async (candidate) => {
+      const found = await this.prisma.productCategory.findUnique({
+        where: { slug: candidate },
+      });
+      return Boolean(found);
     });
 
-    if (existing) {
-      throw new ConflictException(
-        `Category with slug "${createProductCategoryDto.slug}" already exists.`,
-      );
-    }
+    const dataWithoutSlug = (() => {
+      const copy = {
+        ...(createProductCategoryDto as unknown as Record<string, unknown>),
+      };
+      if ('slug' in copy) delete copy.slug;
+      return copy as unknown as Omit<CreateProductCategoryDto, 'slug'>;
+    })();
 
     return await this.prisma.productCategory.create({
-      data: createProductCategoryDto,
+      data: { ...dataWithoutSlug, slug },
     });
   }
 
@@ -87,24 +91,38 @@ export class ProductCategoriesService {
       throw new NotFoundException(`Category with ID "${id}" not found.`);
     }
 
-    if (updateProductCategoryDto.slug) {
-      const slugExists = await this.prisma.productCategory.findFirst({
-        where: {
-          slug: updateProductCategoryDto.slug,
-          NOT: { id },
-        },
-      });
+    // Ignore provided slug; regenerate when name changes
+    const updateWithoutSlug = (() => {
+      const copy = {
+        ...(updateProductCategoryDto as unknown as Record<string, unknown>),
+      };
+      if ('slug' in copy) delete copy.slug;
+      return copy as unknown as Partial<UpdateProductCategoryDto>;
+    })();
 
-      if (slugExists) {
-        throw new ConflictException(
-          `Category with slug "${updateProductCategoryDto.slug}" already exists.`,
-        );
-      }
+    let slugToSet: string | undefined = undefined;
+    if (updateProductCategoryDto.name) {
+      slugToSet = await generateUniqueSlug(
+        updateProductCategoryDto.name,
+        async (candidate) => {
+          const found = await this.prisma.productCategory.findFirst({
+            where: {
+              slug: candidate,
+              NOT: { id },
+            },
+          });
+          return Boolean(found);
+        },
+      );
     }
+
+    const updateData = slugToSet
+      ? { ...updateWithoutSlug, slug: slugToSet }
+      : updateWithoutSlug;
 
     return await this.prisma.productCategory.update({
       where: { id },
-      data: updateProductCategoryDto,
+      data: updateData,
     });
   }
 

@@ -13,6 +13,8 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.role.deleteMany();
   await prisma.permission.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.team.deleteMany();
 
   // 2. Create permissions
   const permissions = [
@@ -117,6 +119,84 @@ async function main() {
   for (const user of createdUsers) {
     await prisma.userRole.create({
       data: { userId: user.id, roleId: userRole.id },
+    });
+  }
+
+  // Also include admin user in the list for address seeding
+  const allUsers = await prisma.user.findMany();
+
+  // 8. Seed teams
+  const teamsData = [
+    {
+      name: 'Alice Johnson',
+      position: 'CEO',
+      linkedin: 'https://linkedin.com/in/alice',
+    },
+    {
+      name: 'Bob Santoso',
+      position: 'CTO',
+      linkedin: 'https://linkedin.com/in/bob',
+    },
+    {
+      name: 'Carla Wijaya',
+      position: 'Product Manager',
+      linkedin: 'https://linkedin.com/in/carla',
+    },
+    {
+      name: 'Dedi Prasetyo',
+      position: 'Designer',
+      linkedin: 'https://linkedin.com/in/dedi',
+    },
+  ];
+
+  // Create teams (use createMany to keep simple)
+  await prisma.team.createMany({ data: teamsData, skipDuplicates: true });
+
+  // 9. Seed addresses: create 3 addresses for each user
+  const addressTemplates = [
+    {
+      label: 'Home',
+      city: 'Jakarta',
+      province: 'DKI Jakarta',
+      postalCode: '10110',
+    },
+    {
+      label: 'Office',
+      city: 'Bandung',
+      province: 'Jawa Barat',
+      postalCode: '40111',
+    },
+    {
+      label: 'Other',
+      city: 'Surabaya',
+      province: 'Jawa Timur',
+      postalCode: '60234',
+    },
+  ];
+
+  const addressesToCreate: Array<any> = [];
+  let phoneCounter = 1000;
+  for (const user of allUsers) {
+    for (const tpl of addressTemplates) {
+      phoneCounter += 1;
+      addressesToCreate.push({
+        label: tpl.label,
+        recipient: user.name ?? user.email,
+        phone: `0812345${phoneCounter}`,
+        address: `${tpl.label} address for ${user.name ?? user.email}`,
+        city: tpl.city,
+        province: tpl.province,
+        postalCode: tpl.postalCode,
+        userId: user.id,
+      });
+    }
+  }
+
+  if (addressesToCreate.length > 0) {
+    // createMany in batches (Prisma has limits on number of records sometimes)
+    await prisma.address.createMany({
+      data: addressesToCreate,
+      skipDuplicates: true,
     });
   }
 
