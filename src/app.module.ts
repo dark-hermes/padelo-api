@@ -22,6 +22,7 @@ import { SettingsModule } from './settings/settings.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { TeamsModule } from './teams/teams.module';
 import { UsersModule } from './users/users.module';
+import { LandingModule } from './landing/landing.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UsersModule } from './users/users.module';
     TeamsModule,
     ProductsModule,
     AddressesModule,
+    LandingModule,
     CartModule,
     OrdersModule,
     ShippingModule,

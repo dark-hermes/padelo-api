@@ -230,6 +230,54 @@ model OrderItem {
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
 }
 
+model Landing {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  // Relasi
+  reviews       LandingReview[]
+  imagesProduct LandingImageProduct[]
+  videos        LandingVideo[]
+}
+
+model LandingReview {
+  id        Int      @id @default(autoincrement())
+  name      String
+  comment   String
+  rating    Int
+  createdAt DateTime @default(now())
+
+  // Foreign key
+  landingId Int
+  landing   Landing @relation(fields: [landingId], references: [id])
+}
+
+model LandingImageProduct {
+  id          Int      @id @default(autoincrement())
+  url         String
+  title       String?
+  description String?
+  price       Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+
+  // Foreign key
+  landingId Int
+  landing   Landing @relation(fields: [landingId], references: [id])
+}
+
+model LandingVideo {
+  id        Int      @id @default(autoincrement())
+  url       String
+  title     String?
+  createdAt DateTime @default(now())
+
+  // Foreign key
+  landingId Int
+  landing   Landing @relation(fields: [landingId], references: [id])
+}
+
 enum OrderStatus {
   PENDING // Menunggu pembayaran
   PAID // Sudah dibayar
