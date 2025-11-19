@@ -1,0 +1,264 @@
+{
+  "info": {
+    "name": "Padelo API - Public",
+    "_postman_id": "a9d87c9e-3f16-4b42-8e9e-36b3b0a4c001",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Read-only public endpoints for products, categories, and teams. No authentication required."
+  },
+  "item": [
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "List teams (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/teams?page={{page}}&limit={{limit}}&search={{search}}&sortBy={{sortBy}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "teams"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search}}"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "{{sortBy}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get team by ID (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/teams/{{teamId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "teams",
+                "{{teamId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/products?page={{page}}&limit={{limit}}&search={{search}}&sortBy={{sortBy}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search}}"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "{{sortBy}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get product by ID (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get product by slug (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/products/slug/{{productSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "products",
+                "slug",
+                "{{productSlug}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Product Categories",
+      "item": [
+        {
+          "name": "List categories (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/product-categories?page={{page}}&limit={{limit}}&search={{search}}&sortBy={{sortBy}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "product-categories"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search}}"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "{{sortBy}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get category by ID (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/product-categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "product-categories",
+                "{{categoryId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get category by slug (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/public/product-categories/slug/{{categorySlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "product-categories",
+                "slug",
+                "{{categorySlug}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "page",
+      "value": "1"
+    },
+    {
+      "key": "limit",
+      "value": "10"
+    },
+    {
+      "key": "search",
+      "value": ""
+    },
+    {
+      "key": "sortBy",
+      "value": "-createdAt"
+    },
+    {
+      "key": "teamId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "productSlug",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "categorySlug",
+      "value": ""
+    }
+  ]
+}

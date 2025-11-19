@@ -16,6 +16,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { ProductsModule } from './products/products.module';
 import { ProfileModule } from './profile/profile.module';
+import { PublicModule } from './public/public.module';
 import { RolesModule } from './roles/roles.module';
 import { SettingsModule } from './settings/settings.module';
 import { ShippingModule } from './shipping/shipping.module';
@@ -48,6 +49,7 @@ import { UsersModule } from './users/users.module';
     CartModule,
     OrdersModule,
     ShippingModule,
+    PublicModule,
   ],
   providers: [
     // JwtService provider left as provided by JwtModule. We keep the compat

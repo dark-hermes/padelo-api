@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProductCategory } from '@prisma/client';
+import { Product, ProductCategory } from '@prisma/client';
 import { FilterSearchQueryDto } from 'src/common/dto/filter-search-query.dto';
 import { PaginatedResponse } from 'src/common/interfaces/pagination.interface';
 import { RequestWithBaseUrl } from 'src/common/interfaces/request-with-base-url.interface';
@@ -66,7 +66,9 @@ export class ProductCategoriesService {
     );
   }
 
-  async findOne(id: string): Promise<ProductCategory> {
+  async findOne(
+    id: string,
+  ): Promise<ProductCategory & { products: Product[] }> {
     const category = await this.prisma.productCategory.findUnique({
       where: { id },
       include: { products: true },
@@ -76,7 +78,22 @@ export class ProductCategoriesService {
       throw new NotFoundException(`Category with ID "${id}" not found.`);
     }
 
-    return category;
+    return category as ProductCategory & { products: Product[] };
+  }
+
+  async findOneBySlug(
+    slug: string,
+  ): Promise<ProductCategory & { products: Product[] }> {
+    const category = await this.prisma.productCategory.findUnique({
+      where: { slug },
+      include: { products: true },
+    });
+
+    if (!category) {
+      throw new NotFoundException(`Category with slug "${slug}" not found.`);
+    }
+
+    return category as ProductCategory & { products: Product[] };
   }
 
   async update(
