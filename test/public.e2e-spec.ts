@@ -121,10 +121,17 @@ describe('Public Module (e2e)', () => {
       const res = await request(server)
         .get(`/public/teams/${teamId}`)
         .expect(200);
-      expect(res.body).toHaveProperty('id', teamId);
-      expect(res.body).toHaveProperty('name', 'Jane Doe');
+      const body = res.body as {
+        id: string;
+        name: string;
+        position: string;
+        image: string | null;
+        linkedin: string | null;
+      };
+      expect(body).toHaveProperty('id', teamId);
+      expect(body).toHaveProperty('name', 'Jane Doe');
       // should not expose extra fields beyond public DTO
-      expect(Object.keys(res.body)).toEqual(
+      expect(Object.keys(body)).toEqual(
         expect.arrayContaining(['id', 'name', 'position', 'image', 'linkedin']),
       );
     });
@@ -148,17 +155,23 @@ describe('Public Module (e2e)', () => {
       const res = await request(server)
         .get(`/public/products/${productId}`)
         .expect(200);
-      expect(res.body).toHaveProperty('id', productId);
-      expect(res.body).toHaveProperty('slug', productSlug);
-      expect(res.body).toHaveProperty('category.slug', categorySlug);
+      const body = res.body as {
+        id: string;
+        slug: string;
+        category?: { slug?: string };
+      };
+      expect(body).toHaveProperty('id', productId);
+      expect(body).toHaveProperty('slug', productSlug);
+      expect(body.category?.slug).toBe(categorySlug);
     });
 
     it('GET /public/products/slug/:slug should return a product', async () => {
       const res = await request(server)
         .get(`/public/products/slug/${productSlug}`)
         .expect(200);
-      expect(res.body).toHaveProperty('id', productId);
-      expect(res.body).toHaveProperty('slug', productSlug);
+      const body = res.body as { id: string; slug: string };
+      expect(body).toHaveProperty('id', productId);
+      expect(body).toHaveProperty('slug', productSlug);
     });
   });
 
@@ -195,8 +208,9 @@ describe('Public Module (e2e)', () => {
       const res = await request(server)
         .get(`/public/product-categories/slug/${categorySlug}`)
         .expect(200);
-      expect(res.body).toHaveProperty('id', categoryId);
-      expect(res.body).toHaveProperty('slug', categorySlug);
+      const body = res.body as { id: string; slug: string };
+      expect(body).toHaveProperty('id', categoryId);
+      expect(body).toHaveProperty('slug', categorySlug);
     });
   });
 });

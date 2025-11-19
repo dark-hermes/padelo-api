@@ -3,19 +3,30 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateLandingDto } from './dto/create-landing.dto';
 import { UpdateLandingDto } from './dto/update-landing.dto';
+
+const landingInclude = {
+  reviews: true,
+  imagesProduct: true,
+  videos: true,
+} satisfies Prisma.LandingInclude;
+
+export type LandingWithRelations = Prisma.LandingGetPayload<{
+  include: typeof landingInclude;
+}>;
 
 @Injectable()
 export class LandingService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createLandingDto: CreateLandingDto) {
+  create(createLandingDto: CreateLandingDto): Promise<LandingWithRelations> {
     // Support nested create for reviews/images/videos if provided
-  const { reviews, images, videos, ...rest } = createLandingDto as any;
+    const { reviews, images, videos, ...rest } = createLandingDto;
 
-    const data: any = { ...rest };
+    const data: Prisma.LandingCreateInput = { ...rest };
 
     if (reviews && Array.isArray(reviews) && reviews.length > 0) {
       data.reviews = { create: reviews };
@@ -30,35 +41,23 @@ export class LandingService {
       data.videos = { create: videos };
     }
 
-    return (this.prisma as any).landing.create({
+    return this.prisma.landing.create({
       data,
-      include: {
-        reviews: true,
-        imagesProduct: true,
-        videos: true,
-      },
+      include: landingInclude,
     });
   }
 
-  async findAll() {
-    return (this.prisma as any).landing.findMany({
-      include: {
-        reviews: true,
-        imagesProduct: true,
-        videos: true,
-      },
+  findAll(): Promise<LandingWithRelations[]> {
+    return this.prisma.landing.findMany({
+      include: landingInclude,
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(id: number) {
-    const landing = await (this.prisma as any).landing.findUnique({
+  async findOne(id: number): Promise<LandingWithRelations> {
+    const landing = await this.prisma.landing.findUnique({
       where: { id },
-      include: {
-        reviews: true,
-        imagesProduct: true,
-        videos: true,
-      },
+      include: landingInclude,
     });
 
     if (!landing) {
@@ -68,7 +67,10 @@ export class LandingService {
     return landing;
   }
 
-  async update(id: number, updateLandingDto: UpdateLandingDto) {
+  async update(
+    id: number,
+    updateLandingDto: UpdateLandingDto,
+  ): Promise<LandingWithRelations> {
     const existing = await this.prisma.landing.findUnique({ where: { id } });
 
     if (!existing) {
@@ -77,7 +79,7 @@ export class LandingService {
 
     // For simplicity, only update root landing fields. Managing nested
     // reviews/images/videos individually can be added if required.
-    const { reviews, images, videos, ...rest } = updateLandingDto as any;
+    const { reviews, images, videos, ...rest } = updateLandingDto;
 
     if (reviews || images || videos) {
       // Don't allow nested replacement in this simple implementation.
@@ -86,18 +88,16 @@ export class LandingService {
       );
     }
 
-    return (this.prisma as any).landing.update({
+    const data: Prisma.LandingUpdateInput = { ...rest };
+
+    return this.prisma.landing.update({
       where: { id },
-      data: rest,
-      include: {
-        reviews: true,
-        imagesProduct: true,
-        videos: true,
-      },
+      data,
+      include: landingInclude,
     });
   }
 
-  async remove(id: number) {
+  async remove(id: number): Promise<void> {
     const existing = await this.prisma.landing.findUnique({ where: { id } });
 
     if (!existing) {

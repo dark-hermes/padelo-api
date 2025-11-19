@@ -10,18 +10,18 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Landing } from '@prisma/client';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CheckAbilities } from 'src/casl/abilities.decorator';
 import { AbilitiesGuard } from 'src/casl/abilities.guard';
 import { Action } from 'src/casl/casl-ability.factory';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { LandingDetailResponseDto } from './dto/landing-detail-response.dto';
-import { LandingService } from './landing.service';
 import { CreateLandingDto } from './dto/create-landing.dto';
+import { LandingDetailResponseDto } from './dto/landing-detail-response.dto';
 import { LandingResponseDto } from './dto/landing-response.dto';
 import { UpdateLandingDto } from './dto/update-landing.dto';
+import { LandingService } from './landing.service';
 
 @ApiTags('Landing')
 @Controller('landing')
@@ -34,7 +34,9 @@ export class LandingController {
   @UseGuards(JwtAuthGuard, AbilitiesGuard)
   @CheckAbilities({ action: Action.Create, subject: 'Landing' })
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createLandingDto: CreateLandingDto): Promise<LandingResponseDto> {
+  async create(
+    @Body() createLandingDto: CreateLandingDto,
+  ): Promise<LandingResponseDto> {
     const landing = await this.landingService.create(createLandingDto);
     return { message: 'Landing berhasil dibuat.', landing };
   }
@@ -46,7 +48,6 @@ export class LandingController {
     return this.landingService.findAll();
   }
 
-  
   @Get(':id')
   @ApiOperation({ summary: 'Get a landing page by ID' })
   @ApiResponse({ status: HttpStatus.OK, type: LandingDetailResponseDto })
