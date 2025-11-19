@@ -18,14 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "prisma:init": "prisma init",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate reset": "prisma migrate reset --force",
-    "prisma:generate": "prisma generate",
-    "prisma:seed": "ts-node prisma/seed.ts",
-    "prisma:generate:test": "prisma generate --schema prisma/schema.test.prisma",
-    "prisma:db:push:test": "prisma db push --schema prisma/schema.test.prisma",
-    "test:e2e:sqlite": "cross-env TEST_DATABASE_URL=file:./dev-test.db npm run prisma:generate:test && cross-env TEST_DATABASE_URL=file:./dev-test.db npm run prisma:db:push:test && npm run test:e2e",
+    "seed": "ts-node prisma/seed.ts",
     "prepare": "husky install"
   },
   "lint-staged": {
@@ -53,6 +46,7 @@
     "cookie-parser": "^1.4.7",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
+    "multer": "^2.0.2",
     "nestjs-pino": "^4.4.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -61,6 +55,7 @@
     "pino-pretty": "^13.1.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "slugify": "^1.6.6",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

@@ -4,23 +4,14 @@ import {
   JwtVerifyOptions,
   JwtService as NestJwtService,
 } from '@nestjs/jwt';
-import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class JwtServiceCompat {
   constructor(private readonly jwtService: NestJwtService) {}
 
-  sign(
-    payload: string,
-    options?: Omit<JwtSignOptions, keyof jwt.SignOptions>,
-  ): string;
-  sign(payload: Buffer | object, options?: JwtSignOptions): string;
   sign(payload: string | Buffer | object, options?: JwtSignOptions): string {
     if (typeof payload === 'string') {
-      return this.jwtService.sign(
-        payload,
-        options as unknown as Omit<JwtSignOptions, keyof jwt.SignOptions>,
-      );
+      return this.jwtService.sign(payload, options);
     }
 
     if (Buffer.isBuffer(payload)) {
@@ -31,23 +22,12 @@ export class JwtServiceCompat {
     return this.jwtService.sign(payload, options);
   }
 
-  signAsync(
-    payload: string,
-    options?: Omit<JwtSignOptions, keyof jwt.SignOptions>,
-  ): Promise<string>;
-  signAsync(
-    payload: Buffer | object,
-    options?: JwtSignOptions,
-  ): Promise<string>;
   async signAsync(
     payload: string | Buffer | object,
     options?: JwtSignOptions,
   ): Promise<string> {
     if (typeof payload === 'string') {
-      return this.jwtService.signAsync(
-        payload,
-        options as unknown as Omit<JwtSignOptions, keyof jwt.SignOptions>,
-      );
+      return this.jwtService.signAsync(payload, options);
     }
 
     if (Buffer.isBuffer(payload)) {
@@ -68,7 +48,7 @@ export class JwtServiceCompat {
     return this.jwtService.verifyAsync<T>(token, options);
   }
 
-  decode<T = any>(token: string, options?: jwt.DecodeOptions): T {
+  decode<T = any>(token: string, options?: Record<string, unknown>): T {
     return this.jwtService.decode<T>(token, options);
   }
 }

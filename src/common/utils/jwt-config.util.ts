@@ -4,11 +4,11 @@
  * If it's a non-empty string with non-digits (e.g. "7d"), return the string as-is.
  * If undefined/null/empty, return undefined.
  *
- * We declare a small local `StringValue`-like type to match the structural shape
- * expected by jsonwebtoken types (string | { value: string }). This avoids
- * importing internal types from the jsonwebtoken typings.
+ * We avoid importing the `ms` package types to keep the build simple across
+ * environments. Using a plain `string` here is sufficient for jsonwebtoken's
+ * `expiresIn` option, which accepts either a number (seconds) or a string like
+ * "7d"/"1h"/"500ms".
  */
-import type { StringValue } from 'ms';
 
 /**
  * Parse an expiresIn configuration value from env/config.
@@ -20,9 +20,11 @@ import type { StringValue } from 'ms';
  * pattern and throws a descriptive error if the value doesn't match. This
  * prevents silent misconfiguration.
  */
+import type { JwtSignOptions } from '@nestjs/jwt';
+
 export function parseExpiresIn(
   value?: string | null,
-): number | StringValue | undefined {
+): JwtSignOptions['expiresIn'] | undefined {
   if (value == null) return undefined;
   const v = value.toString().trim();
   if (v === '') return undefined;
@@ -46,5 +48,5 @@ export function parseExpiresIn(
   }
 
   // v matches the ms-style pattern; cast to StringValue for typing compatibility
-  return v as unknown as StringValue;
+  return v as unknown as JwtSignOptions['expiresIn'];
 }

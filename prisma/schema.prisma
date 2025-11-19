@@ -91,10 +91,11 @@ model Team {
 }
 
 model Product {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  slug        String @unique
+  slug        String  @unique
   pageContent Json
+  coverImage  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -149,14 +150,16 @@ model ProductCategory {
 }
 
 model Address {
-  id         String @id @default(cuid())
-  label      String
-  recipient  String
-  phone      String
-  address    String
-  city       String
-  province   String
-  postalCode String
+  id                   String  @id @default(cuid())
+  label                String
+  recipient            String
+  phone                String
+  address              String
+  city                 String
+  province             String
+  postalCode           String
+  komerceDestinationId Int?
+  komercePinPoint      String?
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String

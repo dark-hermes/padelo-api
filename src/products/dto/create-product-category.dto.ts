@@ -9,12 +9,4 @@ export class CreateProductCategoryDto {
   @IsNotEmpty()
   @IsString()
   name: string;
-
-  @ApiProperty({
-    example: 'electronics',
-    description: 'URL-friendly slug for the category',
-  })
-  @IsNotEmpty()
-  @IsString()
-  slug: string;
 }

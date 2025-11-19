@@ -10,6 +10,7 @@ import { PrismaQuery } from '@casl/prisma';
 import { Injectable } from '@nestjs/common';
 import {
   Address,
+  Order,
   Permission,
   Prisma,
   Product,
@@ -47,6 +48,7 @@ export type Subjects =
       | Landing
       | LandingReview
       | LandingVideo
+      | Order
       | Address
       | 'User'
       | 'Role'
@@ -57,9 +59,10 @@ export type Subjects =
       | 'ProductVariant'
       | 'ProductImage'
       | 'Landing'
-  | 'LandingImageProduct'
+      | 'LandingImageProduct'
       | 'LandingReview'
       | 'LandingVideo'
+      | 'Order'
       | 'Address'
     >
   | 'all';

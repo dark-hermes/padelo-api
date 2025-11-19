@@ -11,14 +11,6 @@ export class CreateProductDto {
   name: string;
 
   @ApiProperty({
-    example: 'smartphone-x',
-    description: 'URL-friendly slug for the product',
-  })
-  @IsNotEmpty()
-  @IsString()
-  slug: string;
-
-  @ApiProperty({
     example: { sections: [{ type: 'hero', content: 'Welcome' }] },
     description: 'Dynamic page content in JSON format',
   })
