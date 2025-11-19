@@ -1,0 +1,663 @@
+{
+  "info": {
+    "name": "Padelo API - Cart, Shipping & Orders",
+    "_postman_id": "7a1c7f1c-5c21-4b2c-8a5e-62cb6cf6a8fb",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection covering cart operations, checkout/orders, and Komerce shipping helpers. Use the Auth request first to store the `authCookie` variable before calling protected endpoints."
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (stores authCookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cookies = pm.response.headers.all().filter((h) => h.key.toLowerCase() === 'set-cookie').map((h) => h.value);",
+                  "const accessCookie = cookies.find((cookie) => cookie.startsWith('access_token='));",
+                  "if (accessCookie) {",
+                  "  pm.environment.set('authCookie', accessCookie.split(';')[0]);",
+                  "  console.log('authCookie stored for reuse');",
+                  "} else {",
+                  "  pm.environment.unset('authCookie');",
+                  "  pm.test('Access token cookie present', () => false);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "description": "Requires authCookie cookie. Use the login call first.",
+      "item": [
+        {
+          "name": "Add item to cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productVariantId\": \"{{productVariantId}}\",\n  \"quantity\": {{cartItemQuantity}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List my cart items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update cart item quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": {{cartItemQuantity}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/{{cartItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "{{cartItemId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove cart item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/{{cartItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "{{cartItemId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "User checkout + admin level shipping helpers.",
+      "item": [
+        {
+          "name": "Get shipping options",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartItemIds\": [\n    \"{{cartItemId}}\"\n  ],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courier}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/shipping-options",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "shipping-options"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout cart items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartItemIds\": [\n    \"{{cartItemId}}\"\n  ],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courier}}\",\n  \"courierService\": \"{{courierService}}\",\n  \"notes\": \"Optional notes\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List my orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel my pending order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update shipping info (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courier\": \"JNE YES\",\n  \"trackingNumber\": \"TRACK123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/shipping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "shipping"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Midtrans webhook (public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{midtransInvoice}}\",\n  \"transaction_status\": \"{{midtransStatus}}\",\n  \"fraud_status\": \"accept\",\n  \"gross_amount\": \"150000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/midtrans/notification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "midtrans",
+                "notification"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Shipping (Komerce)",
+      "description": "Admin-only Komerce integrations (requires authCookie unless noted).",
+      "item": [
+        {
+          "name": "Search Komerce destinations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/destinations?keyword={{komerceKeyword}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "destinations"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "{{komerceKeyword}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Calculate Komerce cost",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipperDestinationId\": {{shipperDestinationId}},\n  \"receiverDestinationId\": {{receiverDestinationId}},\n  \"weight\": {{komerceWeightKg}},\n  \"itemValue\": {{komerceItemValue}},\n  \"cod\": {{komerceCod}},\n  \"originPinPoint\": \"-6.200000,106.816666\",\n  \"destinationPinPoint\": \"-6.914744,107.609810\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/cost",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "cost"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Store Komerce order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderDate\": \"2025-11-19\",\n  \"brandName\": \"{{komerceBrandName}}\",\n  \"shipperName\": \"Padelo Admin\",\n  \"shipperPhone\": \"08123456789\",\n  \"shipperDestinationId\": {{shipperDestinationId}},\n  \"shipperAddress\": \"Jl. Shipper No. 1\",\n  \"shipperEmail\": \"admin@example.com\",\n  \"receiverName\": \"John Receiver\",\n  \"receiverPhone\": \"081298765432\",\n  \"receiverDestinationId\": {{receiverDestinationId}},\n  \"receiverAddress\": \"Jl. Receiver No. 2\",\n  \"shipping\": \"NINJA\",\n  \"shippingType\": \"Standard\",\n  \"paymentMethod\": \"BANK TRANSFER\",\n  \"shippingCost\": 20000,\n  \"shippingCashback\": 0,\n  \"serviceFee\": 0,\n  \"additionalCost\": 0,\n  \"grandTotal\": 150000,\n  \"codValue\": 0,\n  \"insuranceValue\": 0,\n  \"orderDetails\": [\n    {\n      \"productName\": \"Sample Product\",\n      \"productVariantName\": \"Default\",\n      \"productPrice\": 150000,\n      \"productWeight\": 500,\n      \"productWidth\": 10,\n      \"productHeight\": 5,\n      \"productLength\": 15,\n      \"qty\": 1,\n      \"subtotal\": 150000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Komerce order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNo\": \"{{komerceOrderNo}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/orders/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "orders",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Komerce order detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/orders/{{komerceOrderNo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "orders",
+                "{{komerceOrderNo}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Komerce order history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/orders/{{komerceOrderNo}}/history?shipping={{komerceCourier}}&airwayBill={{komerceAwb}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "orders",
+                "{{komerceOrderNo}}",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "shipping",
+                  "value": "{{komerceCourier}}"
+                },
+                {
+                  "key": "airwayBill",
+                  "value": "{{komerceAwb}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Komerce pickup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickupDate\": \"{{komercePickupDate}}\",\n  \"pickupTime\": \"{{komercePickupTime}}\",\n  \"pickupVehicle\": \"{{komercePickupVehicle}}\",\n  \"orders\": [\n    { \"orderNo\": \"{{komerceOrderNo}}\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/pickups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "pickups"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Print Komerce labels",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": \"page_5\",\n  \"orderNos\": [\n    \"{{komerceOrderNo}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/orders/label",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "orders",
+                "label"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Komerce webhook (public)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_no\": \"{{komerceOrderNo}}\",\n  \"cnote\": \"{{komerceAwb}}\",\n  \"status\": \"DELIVERED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/komerce/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipping",
+                "komerce",
+                "webhook"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "adminEmail", "value": "admin@test.dev" },
+    { "key": "adminPassword", "value": "admin12345" },
+    { "key": "authCookie", "value": "" },
+    { "key": "productVariantId", "value": "" },
+    { "key": "cartItemId", "value": "" },
+    { "key": "cartItemQuantity", "value": "1" },
+    { "key": "addressId", "value": "" },
+    { "key": "courier", "value": "jne" },
+    { "key": "courierService", "value": "REG" },
+    { "key": "orderId", "value": "" },
+    { "key": "midtransInvoice", "value": "" },
+    { "key": "midtransStatus", "value": "settlement" },
+    { "key": "komerceKeyword", "value": "Jakarta" },
+    { "key": "komerceOrderNo", "value": "" },
+    { "key": "komerceCourier", "value": "NINJA" },
+    { "key": "komerceAwb", "value": "" },
+    { "key": "shipperDestinationId", "value": "1001" },
+    { "key": "receiverDestinationId", "value": "2001" },
+    { "key": "komerceWeightKg", "value": "1" },
+    { "key": "komerceItemValue", "value": "100000" },
+    { "key": "komerceCod", "value": "false" },
+    { "key": "komercePickupDate", "value": "2025-11-20" },
+    { "key": "komercePickupTime", "value": "13:00" },
+    { "key": "komercePickupVehicle", "value": "Motor" },
+    { "key": "komerceBrandName", "value": "Padelo" }
+  ]
+}

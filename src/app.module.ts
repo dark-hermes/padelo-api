@@ -7,17 +7,20 @@ import { AuthModule } from './auth/auth.module';
 // register it globally to avoid DI cycles.
 // JwtServiceCompat intentionally not used in this file to avoid global provider
 // override (see auth module). Keep the file available for explicit imports.
+import { AddressesModule } from './addresses/addresses.module';
 import './auth/jwt-service.compat';
+import { CartModule } from './cart/cart.module';
 import { BaseUrlMiddleware } from './common/middleware/base-url.middleware';
 import { MaintenanceMiddleware } from './common/middleware/maintenance.middleware';
+import { OrdersModule } from './orders/orders.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { ProductsModule } from './products/products.module';
 import { ProfileModule } from './profile/profile.module';
 import { RolesModule } from './roles/roles.module';
 import { SettingsModule } from './settings/settings.module';
+import { ShippingModule } from './shipping/shipping.module';
 import { TeamsModule } from './teams/teams.module';
 import { UsersModule } from './users/users.module';
-import { AddressesModule } from './addresses/addresses.module';
 
 @Module({
   imports: [
@@ -42,6 +45,9 @@ import { AddressesModule } from './addresses/addresses.module';
     TeamsModule,
     ProductsModule,
     AddressesModule,
+    CartModule,
+    OrdersModule,
+    ShippingModule,
   ],
   providers: [
     // JwtService provider left as provided by JwtModule. We keep the compat

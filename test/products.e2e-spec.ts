@@ -11,6 +11,8 @@ describe('Products Module (e2e)', () => {
   let prisma: PrismaService;
   let accessToken: string;
   let server: Server;
+  const adminEmail = 'admin@example.com';
+  const adminPassword = 'admin12345';
 
   // Store IDs for cleanup
   let categoryId: string;
@@ -42,6 +44,44 @@ describe('Products Module (e2e)', () => {
       },
     });
 
+    await prisma.refreshToken.deleteMany({});
+
+    // Ensure admin permission/role/user exist for tests
+    let manageAll = await prisma.permission.findFirst({
+      where: { action: 'manage', subject: 'all' },
+    });
+    if (!manageAll) {
+      manageAll = await prisma.permission.create({
+        data: { action: 'manage', subject: 'all', fields: [] },
+      });
+    }
+    const adminRole = await prisma.role.upsert({
+      where: { name: 'ADMIN' },
+      update: {},
+      create: { name: 'ADMIN' },
+    });
+    const existingRolePerm = await prisma.rolePermission.findFirst({
+      where: { roleId: adminRole.id, permissionId: manageAll.id },
+    });
+    if (!existingRolePerm) {
+      await prisma.rolePermission.create({
+        data: { roleId: adminRole.id, permissionId: manageAll.id },
+      });
+    }
+    const bcrypt = await import('bcrypt');
+    const salt = await bcrypt.genSalt();
+    const hashed = await bcrypt.hash(adminPassword, salt);
+    const adminUser = await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: { password: hashed },
+      create: { email: adminEmail, name: 'Admin', password: hashed },
+    });
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+      update: {},
+      create: { userId: adminUser.id, roleId: adminRole.id },
+    });
+
     await app.init();
     // cast Nest's internal server to a typed Server for supertest
     server = app.getHttpServer() as unknown as Server;
@@ -50,8 +90,8 @@ describe('Products Module (e2e)', () => {
     const loginResponse = await request(server)
       .post('/auth/login')
       .send({
-        email: process.env.DEFAULT_ADMIN_EMAIL,
-        password: process.env.DEFAULT_ADMIN_PASSWORD,
+        email: adminEmail,
+        password: adminPassword,
       })
       .expect(200);
 

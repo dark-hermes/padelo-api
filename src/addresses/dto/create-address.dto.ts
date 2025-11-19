@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateAddressDto {
   @ApiProperty({ example: 'Home', description: 'Label for the address' })
@@ -36,6 +37,25 @@ export class CreateAddressDto {
   @IsString()
   @IsNotEmpty()
   postalCode: string;
+
+  @ApiProperty({
+    example: 123456,
+    description: 'Komerce destination directory ID',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  komerceDestinationId?: number;
+
+  @ApiProperty({
+    example: '-6.200000,106.816666',
+    description: 'Komerce pinpoint coordinate for courier pickup/drop',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  komercePinPoint?: string;
 
   @ApiProperty({
     example: 'ckxyz...',

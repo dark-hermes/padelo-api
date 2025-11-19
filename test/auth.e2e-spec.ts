@@ -9,6 +9,8 @@ import { AppModule } from '../src/app.module';
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com';
+  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? 'admin12345';
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -36,7 +38,20 @@ describe('AuthController (e2e)', () => {
     // Clean any existing refresh tokens to avoid unique constraint collisions
     await prisma.refreshToken.deleteMany({});
 
+    const bcrypt = await import('bcrypt');
+    const salt = await bcrypt.genSalt();
+    const hashed = await bcrypt.hash(adminPassword, salt);
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: { password: hashed, name: 'Admin' },
+      create: { email: adminEmail, name: 'Admin', password: hashed },
+    });
+
     await app.init();
+  });
+
+  afterEach(async () => {
+    await app.close();
   });
 
   it('/auth/login (POST)', () => {
@@ -44,8 +59,8 @@ describe('AuthController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: process.env.DEFAULT_ADMIN_EMAIL,
-        password: process.env.DEFAULT_ADMIN_PASSWORD,
+        email: adminEmail,
+        password: adminPassword,
       })
       .expect(200)
       .expect((res: request.Response) => {
@@ -53,7 +68,7 @@ describe('AuthController (e2e)', () => {
         expect(res.body).toHaveProperty('id');
         expect(res.body).toHaveProperty('email');
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        expect(res.body.email).toBe(process.env.DEFAULT_ADMIN_EMAIL);
+        expect(res.body.email).toBe(adminEmail);
 
         // Check that cookies are set
         const cookies = (res.headers['set-cookie'] ??
@@ -90,8 +105,8 @@ describe('AuthController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: process.env.DEFAULT_ADMIN_EMAIL,
-        password: process.env.DEFAULT_ADMIN_PASSWORD,
+        email: adminEmail,
+        password: adminPassword,
       })
       .expect(200)
       .expect((res: request.Response) => {
@@ -99,7 +114,7 @@ describe('AuthController (e2e)', () => {
         expect(res.body).toHaveProperty('id');
         expect(res.body).toHaveProperty('email');
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        expect(res.body.email).toBe(process.env.DEFAULT_ADMIN_EMAIL);
+        expect(res.body.email).toBe(adminEmail);
 
         // Check that cookies are set
         const cookies = (res.headers['set-cookie'] ??
