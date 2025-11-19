@@ -8,12 +8,21 @@ async function main() {
   console.log('Seeding database...');
 
   // 1. Clear existing data
+  // Delete in dependency-safe order to avoid FK violations
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.productImage.deleteMany();
+  await prisma.productVariant.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.productCategory.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.refreshToken.deleteMany();
   await prisma.userRole.deleteMany();
   await prisma.rolePermission.deleteMany();
   await prisma.user.deleteMany();
   await prisma.role.deleteMany();
   await prisma.permission.deleteMany();
-  await prisma.address.deleteMany();
   await prisma.team.deleteMany();
 
   // 2. Create permissions
@@ -82,15 +91,14 @@ async function main() {
   // }
 
   // 5. Create users
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com';
+  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? 'admin123';
   const salt = await bcrypt.genSalt();
-  const hashedPassword = await bcrypt.hash(
-    process.env.DEFAULT_ADMIN_PASSWORD,
-    salt,
-  );
+  const hashedPassword = await bcrypt.hash(adminPassword, salt);
 
   const adminUser = await prisma.user.create({
     data: {
-      email: process.env.DEFAULT_ADMIN_EMAIL,
+      email: adminEmail,
       name: 'Admin',
       password: hashedPassword,
     },
