@@ -1,0 +1,204 @@
+{
+  "info": {
+    "name": "Padelo API - Cart, Orders & Checkout (Flow)",
+    "_postman_id": "8b8f3b3a-2b6f-4d6a-9da0-3bd1b0d1c0aa",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Focused flow for cart → shipping options → checkout → list/cancel orders. Login saves authCookie from Set-Cookie; subsequent requests include it automatically via a variable."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api/v1" },
+    { "key": "userEmail", "value": "user1@example.com" },
+    { "key": "userPassword", "value": "password" },
+    { "key": "productVariantId", "value": "" },
+    { "key": "cartItemQuantity", "value": "1" },
+    { "key": "cartItemId", "value": "" },
+    { "key": "addressId", "value": "" },
+    { "key": "courier", "value": "JNE" },
+    { "key": "courierService", "value": "REG" },
+    { "key": "orderId", "value": "" },
+    { "key": "authCookie", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (User) – stores authCookie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const setCookies = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value);",
+                  "const accessCookie = setCookies.find(c => /^access_token=/.test(c));",
+                  "if (accessCookie) {",
+                  "  pm.environment.set('authCookie', accessCookie.split(';')[0]);",
+                  "  pm.test('Auth cookie captured', () => true);",
+                  "} else {",
+                  "  pm.environment.unset('authCookie');",
+                  "  pm.test('Access token cookie present', () => false);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "description": "Requires authCookie. Run login first.",
+      "item": [
+        {
+          "name": "Add item to cart (capture cartItemId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.item && json.item.id;",
+                  "  if (id) { pm.environment.set('cartItemId', id); pm.test('cartItemId captured', () => true);} else { pm.test('cartItemId missing', () => false);} ",
+                  "} catch (e) { pm.test('Response JSON parse failed', () => false); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "{{authCookie}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productVariantId\": \"{{productVariantId}}\",\n  \"quantity\": {{cartItemQuantity}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+          },
+          "response": []
+        },
+        {
+          "name": "List my cart items",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
+            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update cart item quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "{{authCookie}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": {{cartItemQuantity}}\n}" },
+            "url": { "raw": "{{baseUrl}}/cart/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["cart", "{{cartItemId}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove cart item",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
+            "url": { "raw": "{{baseUrl}}/cart/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["cart", "{{cartItemId}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get shipping options",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "{{authCookie}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartItemIds\": [\n    \"{{cartItemId}}\"\n  ],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courier}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/shipping-options", "host": ["{{baseUrl}}"], "path": ["orders", "shipping-options"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout (captures orderId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  const orderId = json && json.order && json.order.id;",
+                  "  if (orderId) { pm.environment.set('orderId', orderId); pm.test('orderId captured', () => true);} else { pm.test('orderId missing', () => false);} ",
+                  "} catch (e) { pm.test('Response JSON parse failed', () => false); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "{{authCookie}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartItemIds\": [\n    \"{{cartItemId}}\"\n  ],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courier}}\",\n  \"courierService\": \"{{courierService}}\",\n  \"notes\": \"Optional notes\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/checkout", "host": ["{{baseUrl}}"], "path": ["orders", "checkout"] }
+          },
+          "response": []
+        },
+        {
+          "name": "List my orders",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
+            "url": { "raw": "{{baseUrl}}/orders/me", "host": ["{{baseUrl}}"], "path": ["orders", "me"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel my pending order",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "cancel"] }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
