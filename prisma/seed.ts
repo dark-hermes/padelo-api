@@ -135,6 +135,30 @@ async function main() {
     });
   }
 
+  // CRUD permission for addresses for USER role
+  const addressPermissions = allPermissions.filter(
+    (p) =>
+      p.subject === 'Address' &&
+      ['create', 'read', 'update', 'delete'].includes(p.action),
+  );
+  for (const perm of addressPermissions) {
+    await prisma.rolePermission.create({
+      data: { roleId: userRole.id, permissionId: perm.id },
+    });
+  }
+
+  // CRUD permission for orders for USER role
+  const orderPermissions = allPermissions.filter(
+    (p) =>
+      p.subject === 'Order' &&
+      ['create', 'read', 'update', 'delete'].includes(p.action),
+  );
+  for (const perm of orderPermissions) {
+    await prisma.rolePermission.create({
+      data: { roleId: userRole.id, permissionId: perm.id },
+    });
+  }
+
   // 5. Create users
   const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com';
   const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? 'admin123';

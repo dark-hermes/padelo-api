@@ -6,17 +6,50 @@
     "description": "Focused flow for cart → shipping options → checkout → list/cancel orders. Login saves authCookie from Set-Cookie; subsequent requests include it automatically via a variable."
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8000/api/v1" },
-    { "key": "userEmail", "value": "user1@example.com" },
-    { "key": "userPassword", "value": "password" },
-    { "key": "productVariantId", "value": "" },
-    { "key": "cartItemQuantity", "value": "1" },
-    { "key": "cartItemId", "value": "" },
-    { "key": "addressId", "value": "" },
-    { "key": "courier", "value": "JNE" },
-    { "key": "courierService", "value": "REG" },
-    { "key": "orderId", "value": "" },
-    { "key": "authCookie", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1"
+    },
+    {
+      "key": "userEmail",
+      "value": "user1@example.com"
+    },
+    {
+      "key": "userPassword",
+      "value": "password"
+    },
+    {
+      "key": "productVariantId",
+      "value": ""
+    },
+    {
+      "key": "cartItemQuantity",
+      "value": "1"
+    },
+    {
+      "key": "cartItemId",
+      "value": ""
+    },
+    {
+      "key": "addressId",
+      "value": ""
+    },
+    {
+      "key": "courier",
+      "value": "JNE"
+    },
+    {
+      "key": "courierService",
+      "value": "REG"
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "authCookie",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -46,7 +79,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -54,8 +90,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           },
           "response": []
@@ -86,14 +127,28 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Cookie", "value": "{{authCookie}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"productVariantId\": \"{{productVariantId}}\",\n  \"quantity\": {{cartItemQuantity}}\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
           },
           "response": []
         },
@@ -101,8 +156,21 @@
           "name": "List my cart items",
           "request": {
             "method": "GET",
-            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
-            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
           },
           "response": []
         },
@@ -111,11 +179,29 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Cookie", "value": "{{authCookie}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"quantity\": {{cartItemQuantity}}\n}" },
-            "url": { "raw": "{{baseUrl}}/cart/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["cart", "{{cartItemId}}"] }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": {{cartItemQuantity}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/{{cartItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "{{cartItemId}}"
+              ]
+            }
           },
           "response": []
         },
@@ -123,8 +209,22 @@
           "name": "Remove cart item",
           "request": {
             "method": "DELETE",
-            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
-            "url": { "raw": "{{baseUrl}}/cart/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["cart", "{{cartItemId}}"] }
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/{{cartItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "{{cartItemId}}"
+              ]
+            }
           },
           "response": []
         }
@@ -138,14 +238,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Cookie", "value": "{{authCookie}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"cartItemIds\": [\n    \"{{cartItemId}}\"\n  ],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courier}}\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/orders/shipping-options", "host": ["{{baseUrl}}"], "path": ["orders", "shipping-options"] }
+            "url": {
+              "raw": "{{baseUrl}}/orders/shipping-options",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "shipping-options"
+              ]
+            }
           },
           "response": []
         },
@@ -169,14 +284,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Cookie", "value": "{{authCookie}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"cartItemIds\": [\n    \"{{cartItemId}}\"\n  ],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courier}}\",\n  \"courierService\": \"{{courierService}}\",\n  \"notes\": \"Optional notes\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/orders/checkout", "host": ["{{baseUrl}}"], "path": ["orders", "checkout"] }
+            "url": {
+              "raw": "{{baseUrl}}/orders/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
+            }
           },
           "response": []
         },
@@ -184,8 +314,22 @@
           "name": "List my orders",
           "request": {
             "method": "GET",
-            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
-            "url": { "raw": "{{baseUrl}}/orders/me", "host": ["{{baseUrl}}"], "path": ["orders", "me"] }
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "me"
+              ]
+            }
           },
           "response": []
         },
@@ -193,8 +337,23 @@
           "name": "Cancel my pending order",
           "request": {
             "method": "PATCH",
-            "header": [ { "key": "Cookie", "value": "{{authCookie}}" } ],
-            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "cancel"] }
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{authCookie}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
+            }
           },
           "response": []
         }

@@ -45,10 +45,10 @@ export class RajaOngkirService {
   private async loadCityCache(): Promise<void> {
     if (this.cityCache) return;
     const apiKey = this.config.get<string>('RAJAONGKIR_API_KEY');
-    if (!apiKey) {
-      this.cityCache = new Map();
-      return;
-    }
+    // if (!apiKey) {
+    //   this.cityCache = new Map();
+    //   return;
+    // }
 
     try {
       const url =
@@ -108,9 +108,6 @@ export class RajaOngkirService {
     service?: string;
   }): Promise<ShippingOption[]> {
     const apiKey = this.config.get<string>('RAJAONGKIR_API_KEY');
-    if (!apiKey) {
-      return this.buildFallbackOptions(params);
-    }
 
     const originId = await this.getCityId(params.originCity);
     const destinationId = await this.getCityId(params.destinationCity);

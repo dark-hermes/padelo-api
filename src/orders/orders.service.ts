@@ -8,12 +8,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Address, OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { KomerceShippingService } from 'src/shipping/komerce-shipping.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { MidtransNotificationDto } from './dto/midtrans-notification.dto';
 import { ShippingOptionsDto } from './dto/shipping-options.dto';
 import { UpdateShippingDto } from './dto/update-shipping.dto';
 import { MidtransService, MidtransTransactionResult } from './midtrans.service';
-import { RajaOngkirService, ShippingOption } from './rajaongkir.service';
 
 type CartItemWithVariant = Prisma.CartItemGetPayload<{
   include: { productVariant: { include: { product: true } } };
@@ -31,53 +31,125 @@ interface CartSummary {
   totalProductAmount: number; // number representation
 }
 
+interface KomerceCalculateResult {
+  shipping_name: string;
+  service_name: string;
+  weight: number;
+  is_cod: boolean;
+  shipping_cost: number;
+  shipping_cost_net?: number;
+  etd?: string;
+}
+
+interface KomerceCalculateResponse {
+  data?: {
+    calculate_reguler?: KomerceCalculateResult[];
+    calculate_cargo?: KomerceCalculateResult[];
+    calculate_instant?: KomerceCalculateResult[];
+  };
+}
+
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rajaOngkir: RajaOngkirService,
+    private readonly komerce: KomerceShippingService,
     private readonly midtrans: MidtransService,
     private readonly config: ConfigService,
   ) {}
 
-  async getShippingOptions(
-    userId: string,
-    dto: ShippingOptionsDto,
-  ): Promise<ShippingOption[]> {
+  async getShippingOptions(userId: string, dto: ShippingOptionsDto) {
     const summary = await this.collectCartSummary(userId, dto.cartItemIds);
     const address = await this.getUserAddress(userId, dto.addressId);
 
-    return await this.rajaOngkir.calculateCost({
-      originCity: this.getOriginCity(),
-      destinationCity: address.city,
-      courier: dto.courier,
-      weight: summary.totalWeight,
+    this.logger.debug(
+      `getShippingOptions: user=${userId} cartItemIds=${dto.cartItemIds.join(',')} items=${summary.items.length} addressFound=${!!address}`,
+    );
+
+    const receiverDestinationId =
+      await this.resolveReceiverDestinationId(address);
+
+    const weightKg = Math.max(summary.totalWeight / 1000, 0.001);
+    const itemValue = Math.round(summary.totalProductAmount);
+
+    const calc = await this.komerce.calculateTariff({
+      shipperDestinationId: 8161, // constant as specified
+      receiverDestinationId,
+      weight: weightKg,
+      itemValue,
+      cod: true,
+      originPinPoint: address.komercePinPoint ?? undefined,
+      destinationPinPoint: address.komercePinPoint ?? undefined,
     });
+
+    const reguler: KomerceCalculateResult[] =
+      (calc as KomerceCalculateResponse).data?.calculate_reguler ?? [];
+    const cargo: KomerceCalculateResult[] =
+      (calc as KomerceCalculateResponse).data?.calculate_cargo ?? [];
+    const instant: KomerceCalculateResult[] =
+      (calc as KomerceCalculateResponse).data?.calculate_instant ?? [];
+
+    const mapOption = (o: KomerceCalculateResult) => {
+      const base = Number(o.shipping_cost_net ?? o.shipping_cost ?? 0);
+      const costOriginal = base;
+      const min = costOriginal + 1000;
+      const max = costOriginal + 2000;
+      return {
+        shippingName: o.shipping_name,
+        serviceName: o.service_name,
+        weight: o.weight,
+        isCod: o.is_cod,
+        shippingCostOriginal: costOriginal,
+        shippingCostEstimatedMin: min,
+        shippingCostEstimatedMax: max,
+        etd: o.etd ?? null,
+      };
+    };
+
+    return {
+      reguler: reguler.map(mapOption),
+      cargo: cargo.map(mapOption),
+      instant: instant.map(mapOption),
+    };
   }
 
   async checkout(user: RequestUser, dto: CreateCheckoutDto) {
     const summary = await this.collectCartSummary(user.id, dto.cartItemIds);
     const address = await this.getUserAddress(user.id, dto.addressId);
 
-    const options = await this.rajaOngkir.calculateCost({
-      originCity: this.getOriginCity(),
-      destinationCity: address.city,
-      courier: dto.courier,
-      weight: summary.totalWeight,
+    const receiverDestinationId =
+      await this.resolveReceiverDestinationId(address);
+    const weightKg = Math.max(summary.totalWeight / 1000, 0.001);
+    const itemValue = Math.round(summary.totalProductAmount);
+    const calc = await this.komerce.calculateTariff({
+      shipperDestinationId: 8161,
+      receiverDestinationId,
+      weight: weightKg,
+      itemValue,
+      cod: true,
+      originPinPoint: address.komercePinPoint ?? undefined,
+      destinationPinPoint: address.komercePinPoint ?? undefined,
     });
-
-    const courierService = dto.courierService.trim().toUpperCase();
-    const selectedOption = options.find(
-      (option) => option.service?.toUpperCase() === courierService,
+    const allReguler: KomerceCalculateResult[] =
+      (calc as KomerceCalculateResponse).data?.calculate_reguler ?? [];
+    const targetName = dto.courier.trim().toUpperCase();
+    const targetService = dto.courierService.trim().toUpperCase();
+    const selected = allReguler.find(
+      (o) =>
+        String(o.shipping_name).toUpperCase() === targetName &&
+        String(o.service_name).toUpperCase() === targetService,
     );
-
-    if (!selectedOption) {
+    if (!selected) {
       throw new BadRequestException('Layanan pengiriman tidak tersedia.');
     }
-
-    const shippingCost = Number(selectedOption.cost) || 0;
+    const shippingCostOriginal = Number(
+      selected.shipping_cost_net ?? selected.shipping_cost ?? 0,
+    );
+    const shippingCostEstimatedMin = shippingCostOriginal + 1000;
+    const shippingCostEstimatedMax = shippingCostOriginal + 2000;
+    const shippingCost = shippingCostOriginal;
     const productAmountDecimal = new Prisma.Decimal(
       summary.totalProductAmount.toFixed(2),
     );
@@ -93,7 +165,12 @@ export class OrdersService {
           shippingCost: shippingCostDecimal,
           totalAmount: totalAmountDecimal,
           shippingAddress: this.buildAddressSnapshot(address, dto.notes),
-          shippingCourier: `${dto.courier.toUpperCase()} ${courierService}`,
+          shippingCourier: `${targetName} ${targetService}`,
+          shippingName: targetName,
+          shippingServiceName: targetService,
+          shippingCostOriginal: shippingCostOriginal,
+          shippingCostEstimatedMin: shippingCostEstimatedMin,
+          shippingCostEstimatedMax: shippingCostEstimatedMax,
           items: {
             create: summary.items.map((item) => ({
               productName:
@@ -150,7 +227,7 @@ export class OrdersService {
           id: 'SHIPPING',
           price: shippingCost,
           quantity: 1,
-          name: `${dto.courier.toUpperCase()} ${courierService}`,
+          name: `${targetName} ${targetService}`,
         },
       ],
     });
@@ -351,6 +428,29 @@ export class OrdersService {
 
   private getOriginCity(): string {
     return this.config.get<string>('STORE_ORIGIN_CITY')?.trim() || 'Jakarta';
+  }
+
+  private async resolveReceiverDestinationId(address: Address) {
+    if (address.komerceDestinationId) return address.komerceDestinationId;
+    const postal = address.postalCode.trim();
+    const search = (await this.komerce.searchDestination({
+      keyword: postal,
+    })) as {
+      data?: Array<{ id: number | string; zip_code?: string | number }>;
+    };
+    const destinations = search.data ?? [];
+    const match = destinations.find(
+      (d) => String(d.zip_code).trim() === postal,
+    );
+    if (!match) {
+      throw new NotFoundException('Destinasi pengiriman tidak ditemukan.');
+    }
+    const destinationId = Number(match.id);
+    await this.prisma.address.update({
+      where: { id: address.id },
+      data: { komerceDestinationId: destinationId },
+    });
+    return destinationId;
   }
 
   private buildAddressSnapshot(address: Address, notes?: string) {

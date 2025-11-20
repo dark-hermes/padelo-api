@@ -190,14 +190,20 @@ model Order {
   status        OrderStatus @default(PENDING)
 
   // --- Pricing Snapshot ---
-  totalProductAmount Decimal @db.Decimal(12, 2)
-  shippingCost       Decimal @db.Decimal(12, 2)
-  totalAmount        Decimal @db.Decimal(12, 2)
+  totalProductAmount       Decimal  @db.Decimal(12, 2)
+  shippingCost             Decimal  @db.Decimal(12, 2)
+  totalAmount              Decimal  @db.Decimal(12, 2)
+  // Komerce detailed shipping cost snapshot (optional)
+  shippingCostOriginal     Decimal? @db.Decimal(12, 2) // original cost (e.g. net or base)
+  shippingCostEstimatedMin Decimal? @db.Decimal(12, 2) // estimated min with margin
+  shippingCostEstimatedMax Decimal? @db.Decimal(12, 2) // estimated max with margin
 
   // --- Shipping Info Snapshot ---
-  shippingAddress Json? // Simpan alamat lengkap sebagai JSON
-  shippingCourier String? // misal: "JNE REG"
-  shippingResi    String? // Nomor resi, diisi saat pengiriman
+  shippingAddress     Json? // Simpan alamat lengkap sebagai JSON
+  shippingCourier     String? // misal: "JNE REG"
+  shippingResi        String? // Nomor resi, diisi saat pengiriman
+  shippingName        String? // e.g. JNE, JNT
+  shippingServiceName String? // e.g. REG, EZ
 
   // --- Payment info ---
   paymentToken String? // Midtrans payment token

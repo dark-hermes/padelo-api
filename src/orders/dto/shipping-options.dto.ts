@@ -12,9 +12,4 @@ export class ShippingOptionsDto {
   @IsString()
   @IsNotEmpty()
   addressId: string;
-
-  @ApiProperty({ description: 'Courier code, e.g. jne, tiki, pos' })
-  @IsString()
-  @IsNotEmpty()
-  courier: string;
 }

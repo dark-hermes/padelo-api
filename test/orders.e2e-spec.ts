@@ -3,11 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { Server } from 'http';
 import { MidtransService } from 'src/orders/midtrans.service';
-import {
-  RajaOngkirService,
-  ShippingOption,
-} from 'src/orders/rajaongkir.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { KomerceShippingService } from 'src/shipping/komerce-shipping.service';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -39,21 +36,46 @@ describe('Orders Module (e2e)', () => {
   };
 
   type ShippingOptionsResponseBody = {
-    options: Array<{ service: string }>;
+    reguler: Array<{
+      serviceName: string;
+      shippingCostOriginal: number;
+      shippingCostEstimatedMin: number;
+      shippingCostEstimatedMax: number;
+    }>;
+    cargo: Array<{
+      serviceName: string;
+      shippingCostOriginal: number;
+      shippingCostEstimatedMin: number;
+      shippingCostEstimatedMax: number;
+    }>;
+    instant: Array<{
+      serviceName: string;
+      shippingCostOriginal: number;
+      shippingCostEstimatedMin: number;
+      shippingCostEstimatedMax: number;
+    }>;
   };
 
   const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com';
   const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? 'admin12345';
 
-  const shippingOptionsMock: ShippingOption[] = [
-    {
-      courier: 'JNE',
-      service: 'REG',
-      description: 'Test shipping option',
-      etd: '2-3',
-      cost: 15000,
+  const komerceCalculateMock = {
+    data: {
+      calculate_reguler: [
+        {
+          shipping_name: 'JNE',
+          service_name: 'REG',
+          weight: 1,
+          is_cod: true,
+          shipping_cost: 15000,
+          shipping_cost_net: 14000,
+          etd: '2-3',
+        },
+      ],
+      calculate_cargo: [],
+      calculate_instant: [],
     },
-  ];
+  };
 
   const midtransServiceMock: Partial<MidtransService> = {
     createTransaction: jest
@@ -66,8 +88,14 @@ describe('Orders Module (e2e)', () => {
       ),
   };
 
-  const rajaOngkirServiceMock: Partial<RajaOngkirService> = {
-    calculateCost: jest.fn().mockResolvedValue(shippingOptionsMock),
+  const komerceServiceMock: Partial<KomerceShippingService> = {
+    calculateTariff: jest.fn().mockResolvedValue(komerceCalculateMock),
+    searchDestination: jest.fn().mockResolvedValue({
+      data: [
+        { id: 8161, zip_code: '12345' },
+        { id: 25998, zip_code: '99999' },
+      ],
+    }),
   };
 
   beforeAll(async () => {
@@ -76,8 +104,8 @@ describe('Orders Module (e2e)', () => {
     })
       .overrideProvider(MidtransService)
       .useValue(midtransServiceMock)
-      .overrideProvider(RajaOngkirService)
-      .useValue(rajaOngkirServiceMock);
+      .overrideProvider(KomerceShippingService)
+      .useValue(komerceServiceMock);
 
     const moduleFixture: TestingModule = await moduleBuilder.compile();
 
@@ -159,6 +187,12 @@ describe('Orders Module (e2e)', () => {
       throw new Error('address not seeded');
     }
 
+    // Ensure destinationId preset to bypass search fallback in tests
+    await prisma.address.update({
+      where: { id: addressId },
+      data: { komerceDestinationId: 8161 },
+    });
+
     const category = await prisma.productCategory.create({
       data: { name: 'OrderCat', slug: `order-cat-${Date.now()}` },
     });
@@ -204,7 +238,7 @@ describe('Orders Module (e2e)', () => {
     return cart.id;
   };
 
-  it('should provide shipping options for selected cart items', async () => {
+  it('should provide Komerce shipping options for selected cart items with cost ranges', async () => {
     const cartItemId = await createCartItem(2);
 
     const res = await request(server)
@@ -213,16 +247,22 @@ describe('Orders Module (e2e)', () => {
       .send({
         cartItemIds: [cartItemId],
         addressId,
-        courier: courierPayload.courier,
       })
       .expect(200);
 
     const body = res.body as ShippingOptionsResponseBody;
-    expect(Array.isArray(body.options)).toBe(true);
-    expect(body.options.length).toBeGreaterThan(0);
+    expect(Array.isArray(body.reguler)).toBe(true);
+    expect(Array.isArray(body.cargo)).toBe(true);
+    expect(Array.isArray(body.instant)).toBe(true);
+    expect(body.reguler.length).toBeGreaterThan(0);
+    const first = body.reguler[0];
+    expect(first.serviceName.toUpperCase()).toBe('REG');
+    expect(first.shippingCostOriginal).toBe(14000);
+    expect(first.shippingCostEstimatedMin).toBe(15000);
+    expect(first.shippingCostEstimatedMax).toBe(16000);
   });
 
-  it('should create checkout and order from cart items', async () => {
+  it('should create checkout and order from cart items and persist cost snapshots', async () => {
     const cartItemId = await createCartItem(1);
 
     const res = await request(server)
@@ -240,6 +280,17 @@ describe('Orders Module (e2e)', () => {
 
     activeOrderId = body.order.id;
     activeInvoice = body.order.invoiceNumber;
+
+    // Validate persisted shipping cost snapshots & courier names
+    const created = await prisma.order.findUnique({
+      where: { id: activeOrderId },
+    });
+    if (!created) throw new Error('Created order not found');
+    expect(Number(created.shippingCostOriginal)).toBe(14000);
+    expect(Number(created.shippingCostEstimatedMin)).toBe(15000);
+    expect(Number(created.shippingCostEstimatedMax)).toBe(16000);
+    expect(created.shippingName).toBe('JNE');
+    expect(created.shippingServiceName).toBe('REG');
   });
 
   it('should list my orders and include the latest order', async () => {

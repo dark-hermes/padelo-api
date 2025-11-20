@@ -53,7 +53,8 @@ export class OrdersController {
   ) {
     const user = this.ensureUser(req);
     const options = await this.ordersService.getShippingOptions(user.id, dto);
-    return { options };
+    // Return the arrays directly (reguler, cargo, instant) for simpler client consumption
+    return options;
   }
 
   @Post('checkout')

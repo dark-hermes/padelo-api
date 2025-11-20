@@ -1,0 +1,445 @@
+{
+  "info": {
+    "_postman_id": "padelo-purchase-flow-collection",
+    "name": "Padelo - Alur Lengkap Pembelian Sampai Pesanan Selesai (Komerce)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Alur end-to-end: Login → (Opsional) buat alamat → buat produk & variant → masukkan ke cart → hitung opsi ongkir Komerce → checkout (order PENDING) → simulasi Midtrans settlement (order PAID) → update pengiriman (order SHIPPED) → verifikasi daftar order. Jika status DELIVERED belum tersedia, alur berhenti di SHIPPED."
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Ambil access_token dari Set-Cookie",
+                  "const setCookie = pm.response.headers.get('set-cookie');",
+                  "if (setCookie) {",
+                  "  const match = setCookie.match(/access_token=([^;]+)/);",
+                  "  if (match) pm.environment.set('accessToken', match[1]);",
+                  "}",
+                  "pm.test('Login status 200', () => pm.response.code === 200);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Addresses",
+      "item": [
+        {
+          "name": "List My Addresses",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/addresses/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["addresses", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "// Struktur bisa berupa object paginated atau array langsung",
+                  "if (Array.isArray(data.items) && data.items.length) {",
+                  "  pm.environment.set('addressId', data.items[0].id);",
+                  "} else if (Array.isArray(data) && data.length) {",
+                  "  pm.environment.set('addressId', data[0].id);",
+                  "}",
+                  "pm.test('Addresses fetched', () => pm.response.code === 200);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Address (Optional)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["addresses"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Utama\",\n  \"recipient\": \"Admin\",\n  \"phone\": \"08123456789\",\n  \"address\": \"Jl. Test No. 1\",\n  \"city\": \"Jakarta\",\n  \"province\": \"DKI Jakarta\",\n  \"postalCode\": \"12345\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.address && json.address.id) pm.environment.set('addressId', json.address.id);",
+                  "pm.test('Address created', () => pm.response.code === 201);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products & Variants",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Produk Tes\",\n  \"slug\": \"produk-tes-{{$timestamp}}\",\n  \"pageContent\": { \"sections\": [] }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.product && json.product.id) pm.environment.set('productId', json.product.id);",
+                  "pm.test('Product created', () => pm.response.code === 201);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Product Variant",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/products/variants",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "variants"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"Var A\",\n  \"price\": 15000,\n  \"sku\": \"SKU-{{$timestamp}}\",\n  \"stock\": 50,\n  \"weight\": 0.2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.variant && json.variant.id) pm.environment.set('productVariantId', json.variant.id);",
+                  "pm.test('Variant created', () => pm.response.code === 201);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Add Item To Cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productVariantId\": \"{{productVariantId}}\",\n  \"quantity\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.item && json.item.id) pm.environment.set('cartItemId', json.item.id);",
+                  "pm.test('Item added to cart', () => pm.response.code === 201);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Cart",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Cart fetched', () => pm.response.code === 200);"] ,
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shipping Options",
+      "item": [
+        {
+          "name": "Get Komerce Shipping Options",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders/shipping-options",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "shipping-options"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartItemIds\": [\"{{cartItemId}}\"],\n  \"addressId\": \"{{addressId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (Array.isArray(json.reguler) && json.reguler.length) {",
+                  "  pm.environment.set('courierName', json.reguler[0].shippingName);",
+                  "  pm.environment.set('courierService', json.reguler[0].serviceName);",
+                  "}",
+                  "pm.test('Shipping options retrieved', () => pm.response.code === 200);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Checkout & Payment",
+      "item": [
+        {
+          "name": "Checkout (Create Order)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "checkout"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartItemIds\": [\"{{cartItemId}}\"],\n  \"addressId\": \"{{addressId}}\",\n  \"courier\": \"{{courierName}}\",\n  \"courierService\": \"{{courierService}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.order && json.order.id) {",
+                  "  pm.environment.set('orderId', json.order.id);",
+                  "  pm.environment.set('invoiceNumber', json.order.invoiceNumber);",
+                  "}",
+                  "pm.test('Checkout created (201)', () => pm.response.code === 201);",
+                  "pm.test('Order status PENDING', () => json.order && json.order.status === 'PENDING');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Simulate Midtrans Settlement Webhook",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders/midtrans/notification",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "midtrans", "notification"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{invoiceNumber}}\",\n  \"transaction_status\": \"settlement\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Webhook processed (200)', () => pm.response.code === 200);",
+                  "pm.test('Order status PAID', () => json.order && json.order.status === 'PAID');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shipping Update (Admin)",
+      "item": [
+        {
+          "name": "Update Shipping (Tracking → SHIPPED)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/shipping",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "shipping"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courier\": \"{{courierName}} {{courierService}}\",\n  \"trackingNumber\": \"TRACK123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Shipping updated (200)', () => pm.response.code === 200);",
+                  "pm.test('Order status SHIPPED', () => json.order && json.order.status === 'SHIPPED');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+        ,
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "cancel"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Cancel processed (200)', () => pm.response.code === 200);",
+                  "pm.test('Order status CANCELLED', () => json.order && json.order.status === 'CANCELLED');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Order Verification",
+      "item": [
+        {
+          "name": "List My Orders (Final Check)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/orders/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const list = pm.response.json();",
+                  "pm.test('Orders fetched', () => pm.response.code === 200);",
+                  "if (Array.isArray(list)) {",
+                  "  const target = list.find(o => o.id === pm.environment.get('orderId'));",
+                  "  pm.test('Order found', () => !!target);",
+                  "  if (target) pm.test('Status in [PAID, SHIPPED]', () => ['PAID','SHIPPED'].includes(target.status));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    { "listen": "prerequest", "script": { "exec": [], "type": "text/javascript" } },
+    { "listen": "test", "script": { "exec": [], "type": "text/javascript" } }
+  ]
+}
