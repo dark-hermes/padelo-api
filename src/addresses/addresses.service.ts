@@ -87,6 +87,56 @@ export class AddressesService {
     return result;
   }
 
+  /**
+   * Find addresses for a specific user id. If requesting another user's addresses,
+   * require manage/all permission.
+   */
+  async findByUserId(
+    targetUserId: string,
+    currentUser: User,
+    query: FilterSearchQueryDto,
+    req: RequestWithBaseUrl,
+  ): Promise<PaginatedResponse<Address>> {
+    const userWithPermissions = await this.getUserWithPermissions(
+      currentUser.id,
+    );
+    const ability = this.caslAbilityFactory.createForUser(userWithPermissions);
+
+    // If requesting other user's addresses, require admin/manage
+    if (targetUserId !== currentUser.id && !ability.can(Action.Manage, 'all')) {
+      throw new ForbiddenException(
+        'Not allowed to view addresses for this user.',
+      );
+    }
+
+    const caslWhere: Prisma.AddressWhereInput = accessibleBy(ability).Address;
+
+    const where: Prisma.AddressWhereInput = {
+      AND: [{ userId: targetUserId }, caslWhere].filter(
+        (c) => c && Object.keys(c).length > 0,
+      ),
+    } as Prisma.AddressWhereInput;
+
+    const result = await paginate<Address>(
+      this.prisma.address,
+      { where },
+      { page: query.page, limit: query.limit, baseUrl: req.baseUrlFull },
+    );
+
+    return result;
+  }
+
+  /**
+   * Convenience: find addresses for the currently authenticated user.
+   */
+  async findForCurrentUser(
+    currentUser: User,
+    query: FilterSearchQueryDto,
+    req: RequestWithBaseUrl,
+  ): Promise<PaginatedResponse<Address>> {
+    return this.findByUserId(currentUser.id, currentUser, query, req);
+  }
+
   async findOne(id: string, currentUser: User): Promise<Address> {
     const address = await this.prisma.address.findUnique({ where: { id } });
     if (!address)

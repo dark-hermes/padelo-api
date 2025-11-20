@@ -16,7 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { User } from '@prisma/client';
-import { Response } from 'express';
+import { Response, type CookieOptions } from 'express';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 import { SanitizedUser } from './auth.interface';
 import { AuthService } from './auth.service';
@@ -66,18 +66,23 @@ export class AuthController {
     const accessToken = loginData.tokens.accessToken;
     const refreshToken = loginData.tokens.refreshToken;
 
+    const isProd = process.env.NODE_ENV === 'production';
+    const sameSiteOption: CookieOptions['sameSite'] = isProd ? 'none' : 'lax';
+
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'none',
+      sameSite: sameSiteOption,
+      path: '/',
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      sameSite: 'none',
+      sameSite: sameSiteOption,
+      path: '/',
     });
 
     return loginData.user;
