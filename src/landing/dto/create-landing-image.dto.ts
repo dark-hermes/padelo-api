@@ -10,6 +10,6 @@ export class CreateLandingImageDto {
   @ApiProperty({ required: false, example: 'Large hero image for the landing' })
   description?: string;
 
-  @ApiProperty({ required: false, example: '0.00' })
-  price?: string;
+  @ApiProperty({ example: '0.00' })
+  price: string;
 }

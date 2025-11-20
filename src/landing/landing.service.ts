@@ -34,7 +34,12 @@ export class LandingService {
 
     if (images && Array.isArray(images) && images.length > 0) {
       // Map incoming API 'images' to prisma relation 'imagesProduct'
-      data.imagesProduct = { create: images };
+      data.imagesProduct = {
+        create: images.map((image) => ({
+          ...image,
+          price: new Prisma.Decimal(image.price),
+        })),
+      };
     }
 
     if (videos && Array.isArray(videos) && videos.length > 0) {

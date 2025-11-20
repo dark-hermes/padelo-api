@@ -66,7 +66,7 @@ export class LandingController {
         url: i.url,
         title: i.title,
         description: i.description,
-        price: i.price,
+        price: i.price.toString(),
       })),
       videos: (landing.videos || []).map((v) => ({
         url: v.url,
