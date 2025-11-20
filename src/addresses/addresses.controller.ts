@@ -66,6 +66,35 @@ export class AddressesController {
     return this.addressesService.findAll(req.user, query, req);
   }
 
+  @Get('me')
+  @ApiOperation({ summary: 'List addresses for current authenticated user' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'List of addresses for current user',
+  })
+  @CheckAbilities({ action: Action.Read, subject: 'Address' })
+  listForCurrent(
+    @Req() req: RequestWithUser,
+    @Query() query: FilterSearchQueryDto,
+  ) {
+    return this.addressesService.findForCurrentUser(req.user, query, req);
+  }
+
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'List addresses for a given user ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'List of addresses for given user',
+  })
+  @CheckAbilities({ action: Action.Read, subject: 'Address' })
+  listByUserId(
+    @Param('userId') userId: string,
+    @Req() req: RequestWithUser,
+    @Query() query: FilterSearchQueryDto,
+  ) {
+    return this.addressesService.findByUserId(userId, req.user, query, req);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get address by ID' })
   @ApiResponse({ status: HttpStatus.OK })
