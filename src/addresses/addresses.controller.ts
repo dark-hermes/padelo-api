@@ -72,7 +72,6 @@ export class AddressesController {
     status: HttpStatus.OK,
     description: 'List of addresses for current user',
   })
-  @CheckAbilities({ action: Action.Read, subject: 'Address' })
   listForCurrent(
     @Req() req: RequestWithUser,
     @Query() query: FilterSearchQueryDto,
