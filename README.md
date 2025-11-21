@@ -45,6 +45,18 @@ JWT_REFRESH_SECRET=your-other-very-secret-key
 
 **Note:** The `USER`, `PASSWORD`, and `DATABASE_NAME` must match the values used by the PostgreSQL service in the `docker-compose.yml` file.
 
+### Midtrans Configuration
+
+To enable real Midtrans payments, provide the following variables:
+
+```env
+MIDTRANS_SERVER_KEY=SB-Mid-server-your-sandbox-key
+# Optional: only set if you need to override the default endpoint detection.
+MIDTRANS_SNAP_URL=https://app.sandbox.midtrans.com/snap/v1/transactions
+```
+
+The API automatically switches to the production endpoint (`https://app.midtrans.com/...`) when you use a production server key (prefix `Mid-`). Leave `MIDTRANS_SNAP_URL` empty unless you have a special routing requirement.
+
 ## 3. Running the Application with Docker
 
 The easiest way to get the application and its database running is by using Docker Compose.
@@ -102,6 +114,16 @@ npm run start:dev
 ```
 
 The application will connect to the PostgreSQL database running in Docker and will be available at `http://localhost:8000`.
+
+### Shipment Tracking (Cek Resi API)
+
+The API can proxy tracking information from the community `cek-resi` service. Run the tracker (default `http://localhost:8001/cek-resi`) and configure:
+
+```env
+CEK_RESI_URL=http://localhost:8001/cek-resi
+```
+
+With the variable set, authenticated clients can call `GET /api/v1/orders/tracking/:trackingNumber` to retrieve the latest shipment status and history.
 
 ## 4. Running Tests
 

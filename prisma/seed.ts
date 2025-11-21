@@ -139,7 +139,7 @@ async function main() {
   const addressPermissions = allPermissions.filter(
     (p) =>
       p.subject === 'Address' &&
-      ['create', 'read', 'update', 'delete'].includes(p.action),
+      ['create', 'update', 'delete'].includes(p.action),
   );
   for (const perm of addressPermissions) {
     await prisma.rolePermission.create({
@@ -151,7 +151,7 @@ async function main() {
   const orderPermissions = allPermissions.filter(
     (p) =>
       p.subject === 'Order' &&
-      ['create', 'read', 'update', 'delete'].includes(p.action),
+      ['create', 'update', 'delete'].includes(p.action),
   );
   for (const perm of orderPermissions) {
     await prisma.rolePermission.create({

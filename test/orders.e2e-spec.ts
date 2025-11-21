@@ -24,6 +24,10 @@ describe('Orders Module (e2e)', () => {
     courierService: 'REG',
   } as const;
 
+  const shipperDestinationId = Number(
+    process.env.KOMERCE_SHIPPER_DESTINATION_ID ?? '8161',
+  );
+
   type CheckoutResponseBody = {
     message: string;
     order: {
@@ -92,7 +96,7 @@ describe('Orders Module (e2e)', () => {
     calculateTariff: jest.fn().mockResolvedValue(komerceCalculateMock),
     searchDestination: jest.fn().mockResolvedValue({
       data: [
-        { id: 8161, zip_code: '12345' },
+        { id: shipperDestinationId, zip_code: '12345' },
         { id: 25998, zip_code: '99999' },
       ],
     }),
@@ -190,7 +194,7 @@ describe('Orders Module (e2e)', () => {
     // Ensure destinationId preset to bypass search fallback in tests
     await prisma.address.update({
       where: { id: addressId },
-      data: { komerceDestinationId: 8161 },
+      data: { komerceDestinationId: shipperDestinationId },
     });
 
     const category = await prisma.productCategory.create({

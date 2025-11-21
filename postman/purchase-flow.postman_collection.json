@@ -14,12 +14,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -55,8 +63,13 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/addresses/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["addresses", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses",
+                "me"
+              ]
             }
           },
           "event": [
@@ -82,11 +95,20 @@
           "name": "Create Address (Optional)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/addresses",
-              "host": ["{{baseUrl}}"],
-              "path": ["addresses"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -116,11 +138,20 @@
           "name": "Create Product",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/products",
-              "host": ["{{baseUrl}}"],
-              "path": ["products"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -145,11 +176,21 @@
           "name": "Create Product Variant",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/products/variants",
-              "host": ["{{baseUrl}}"],
-              "path": ["products", "variants"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "variants"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -179,11 +220,20 @@
           "name": "Add Item To Cart",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/cart",
-              "host": ["{{baseUrl}}"],
-              "path": ["cart"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -210,15 +260,21 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/cart",
-              "host": ["{{baseUrl}}"],
-              "path": ["cart"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
             }
           },
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": ["pm.test('Cart fetched', () => pm.response.code === 200);"] ,
+                "exec": [
+                  "pm.test('Cart fetched', () => pm.response.code === 200);"
+                ],
                 "type": "text/javascript"
               }
             }
@@ -233,11 +289,21 @@
           "name": "Get Komerce Shipping Options",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/orders/shipping-options",
-              "host": ["{{baseUrl}}"],
-              "path": ["orders", "shipping-options"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "shipping-options"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -270,11 +336,21 @@
           "name": "Checkout (Create Order)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/orders/checkout",
-              "host": ["{{baseUrl}}"],
-              "path": ["orders", "checkout"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -303,11 +379,22 @@
           "name": "Simulate Midtrans Settlement Webhook",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/orders/midtrans/notification",
-              "host": ["{{baseUrl}}"],
-              "path": ["orders", "midtrans", "notification"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "midtrans",
+                "notification"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -337,11 +424,22 @@
           "name": "Update Shipping (Tracking → SHIPPED)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/orders/{{orderId}}/shipping",
-              "host": ["{{baseUrl}}"],
-              "path": ["orders", "{{orderId}}", "shipping"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "shipping"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -361,17 +459,27 @@
               }
             }
           ]
-        }
-        ,
+        },
         {
           "name": "Cancel Order",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["orders", "{{orderId}}", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -403,8 +511,13 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/orders/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["orders", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "me"
+              ]
             }
           },
           "event": [
@@ -439,7 +552,19 @@
     ]
   },
   "event": [
-    { "listen": "prerequest", "script": { "exec": [], "type": "text/javascript" } },
-    { "listen": "test", "script": { "exec": [], "type": "text/javascript" } }
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [],
+        "type": "text/javascript"
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [],
+        "type": "text/javascript"
+      }
+    }
   ]
 }

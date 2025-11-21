@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Address, OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CekResiService } from 'src/shipping/cek-resi.service';
 import { KomerceShippingService } from 'src/shipping/komerce-shipping.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { MidtransNotificationDto } from './dto/midtrans-notification.dto';
@@ -41,12 +42,14 @@ interface KomerceCalculateResult {
   etd?: string;
 }
 
+type KomerceCalculatePayload = {
+  calculate_reguler?: KomerceCalculateResult[];
+  calculate_cargo?: KomerceCalculateResult[];
+  calculate_instant?: KomerceCalculateResult[];
+};
+
 interface KomerceCalculateResponse {
-  data?: {
-    calculate_reguler?: KomerceCalculateResult[];
-    calculate_cargo?: KomerceCalculateResult[];
-    calculate_instant?: KomerceCalculateResult[];
-  };
+  data?: KomerceCalculatePayload;
 }
 
 @Injectable()
@@ -57,6 +60,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly komerce: KomerceShippingService,
     private readonly midtrans: MidtransService,
+    private readonly cekResi: CekResiService,
     private readonly config: ConfigService,
   ) {}
 
@@ -70,26 +74,30 @@ export class OrdersService {
 
     const receiverDestinationId =
       await this.resolveReceiverDestinationId(address);
+    const shipperDestinationId = this.getShipperDestinationId();
+    const originPinPoint = this.getOriginPinPoint();
 
     const weightKg = Math.max(summary.totalWeight / 1000, 0.001);
     const itemValue = Math.round(summary.totalProductAmount);
 
     const calc = await this.komerce.calculateTariff({
-      shipperDestinationId: 8161, // constant as specified
+      shipperDestinationId,
       receiverDestinationId,
       weight: weightKg,
       itemValue,
       cod: true,
-      originPinPoint: address.komercePinPoint ?? undefined,
+      originPinPoint: originPinPoint ?? address.komercePinPoint ?? undefined,
       destinationPinPoint: address.komercePinPoint ?? undefined,
     });
+    const calcPayload = this.extractKomerceCalculatePayload(
+      calc as KomerceCalculatePayload | KomerceCalculateResponse,
+    );
 
     const reguler: KomerceCalculateResult[] =
-      (calc as KomerceCalculateResponse).data?.calculate_reguler ?? [];
-    const cargo: KomerceCalculateResult[] =
-      (calc as KomerceCalculateResponse).data?.calculate_cargo ?? [];
+      calcPayload.calculate_reguler ?? [];
+    const cargo: KomerceCalculateResult[] = calcPayload.calculate_cargo ?? [];
     const instant: KomerceCalculateResult[] =
-      (calc as KomerceCalculateResponse).data?.calculate_instant ?? [];
+      calcPayload.calculate_instant ?? [];
 
     const mapOption = (o: KomerceCalculateResult) => {
       const base = Number(o.shipping_cost_net ?? o.shipping_cost ?? 0);
@@ -121,19 +129,24 @@ export class OrdersService {
 
     const receiverDestinationId =
       await this.resolveReceiverDestinationId(address);
+    const shipperDestinationId = this.getShipperDestinationId();
+    const originPinPoint = this.getOriginPinPoint();
     const weightKg = Math.max(summary.totalWeight / 1000, 0.001);
     const itemValue = Math.round(summary.totalProductAmount);
     const calc = await this.komerce.calculateTariff({
-      shipperDestinationId: 8161,
+      shipperDestinationId,
       receiverDestinationId,
       weight: weightKg,
       itemValue,
       cod: true,
-      originPinPoint: address.komercePinPoint ?? undefined,
+      originPinPoint: originPinPoint ?? address.komercePinPoint ?? undefined,
       destinationPinPoint: address.komercePinPoint ?? undefined,
     });
+    const calcPayload = this.extractKomerceCalculatePayload(
+      calc as KomerceCalculatePayload | KomerceCalculateResponse,
+    );
     const allReguler: KomerceCalculateResult[] =
-      (calc as KomerceCalculateResponse).data?.calculate_reguler ?? [];
+      calcPayload.calculate_reguler ?? [];
     const targetName = dto.courier.trim().toUpperCase();
     const targetService = dto.courierService.trim().toUpperCase();
     const selected = allReguler.find(
@@ -430,15 +443,49 @@ export class OrdersService {
     return this.config.get<string>('STORE_ORIGIN_CITY')?.trim() || 'Jakarta';
   }
 
+  private getShipperDestinationId(): number {
+    const raw = this.config.get<string>('KOMERCE_SHIPPER_DESTINATION_ID');
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) ? parsed : 8161;
+  }
+
+  private getOriginPinPoint(): string | undefined {
+    const raw = this.config.get<string>('KOMERCE_ORIGIN_PIN_POINT');
+    if (!raw) return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+
+  private extractKomerceCalculatePayload(
+    calc: KomerceCalculatePayload | KomerceCalculateResponse,
+  ): KomerceCalculatePayload {
+    if (!calc || typeof calc !== 'object') {
+      return {};
+    }
+    const candidate = calc as KomerceCalculateResponse;
+    if (candidate.data && typeof candidate.data === 'object') {
+      return candidate.data;
+    }
+    return calc as KomerceCalculatePayload;
+  }
+
   private async resolveReceiverDestinationId(address: Address) {
     if (address.komerceDestinationId) return address.komerceDestinationId;
     const postal = address.postalCode.trim();
+    type DestinationRecord = {
+      id: number | string;
+      zip_code?: string | number;
+    };
+    type DestinationPayload =
+      | DestinationRecord[]
+      | { data?: DestinationRecord[] };
+
     const search = (await this.komerce.searchDestination({
       keyword: postal,
-    })) as {
-      data?: Array<{ id: number | string; zip_code?: string | number }>;
-    };
-    const destinations = search.data ?? [];
+    })) as DestinationPayload;
+    const destinations: DestinationRecord[] = Array.isArray(search)
+      ? search
+      : (search.data ?? []);
     const match = destinations.find(
       (d) => String(d.zip_code).trim() === postal,
     );
@@ -488,6 +535,85 @@ export class OrdersService {
         ...item,
         price: Math.round(item.price),
       })),
+    });
+  }
+
+  async trackShipment(trackingNumber: string) {
+    const sanitized = trackingNumber?.trim();
+    if (!sanitized) {
+      throw new BadRequestException('Nomor resi wajib diisi.');
+    }
+
+    const raw = await this.cekResi.track(sanitized);
+    return this.normalizeTrackingPayload(sanitized, raw);
+  }
+
+  private normalizeTrackingPayload(trackingNumber: string, raw: unknown) {
+    const root = this.asRecord(raw);
+    if (!root) {
+      return { trackingNumber, valid: false, checkpoints: [], raw };
+    }
+
+    const dataField = this.asRecord(root['data']) ?? root;
+    const validFlag =
+      this.getBoolean(dataField, 'valid') ?? this.getBoolean(root, 'valid');
+    const payload = this.asRecord(dataField['data']) ?? dataField;
+    const isValid = validFlag ?? true;
+
+    if (!isValid || !payload) {
+      throw new NotFoundException('Nomor resi tidak ditemukan.');
+    }
+
+    const checkpoints = this.getHistory(payload['perjalanan']);
+
+    return {
+      trackingNumber: this.getString(payload, 'noResi') ?? trackingNumber,
+      expedition:
+        this.getString(payload, 'expedisi') ??
+        this.getString(payload, 'expedition'),
+      status: this.getString(payload, 'status'),
+      sender: this.getString(payload, 'pengirim'),
+      destination: this.getString(payload, 'tujuan'),
+      receiver: this.getString(payload, 'penerima'),
+      shippedAt: this.getString(payload, 'tanggalKirim'),
+      checkpoints,
+    };
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | undefined {
+    if (value && typeof value === 'object') {
+      return value as Record<string, unknown>;
+    }
+    return undefined;
+  }
+
+  private getString(record: Record<string, unknown>, key: string) {
+    const value = record?.[key];
+    return typeof value === 'string' ? value : null;
+  }
+
+  private getBoolean(record: Record<string, unknown>, key: string) {
+    const value = record?.[key];
+    return typeof value === 'boolean' ? value : undefined;
+  }
+
+  private getHistory(value: unknown) {
+    if (!Array.isArray(value)) {
+      return [] as Array<{
+        timestamp: string | null;
+        description: string | null;
+      }>;
+    }
+
+    return value.map((entry) => {
+      const record = this.asRecord(entry) ?? {};
+      return {
+        timestamp:
+          this.getString(record, 'tanggal') ?? this.getString(record, 'time'),
+        description:
+          this.getString(record, 'keterangan') ??
+          this.getString(record, 'description'),
+      };
     });
   }
 }

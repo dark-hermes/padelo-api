@@ -76,6 +76,15 @@ export class OrdersController {
     return await this.ordersService.getMyOrders(user.id);
   }
 
+  @Get('tracking/:trackingNumber')
+  @UseGuards(JwtAuthGuard, AbilitiesGuard)
+  @ApiOperation({
+    summary: 'Tracking status pengiriman berdasarkan nomor resi',
+  })
+  async trackOrder(@Param('trackingNumber') trackingNumber: string) {
+    return await this.ordersService.trackShipment(trackingNumber);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, AbilitiesGuard)
   @CheckAbilities({ action: Action.Manage, subject: 'all' })

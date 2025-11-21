@@ -22,7 +22,7 @@ export class MidtransService {
     customer: { name: string; email?: string; phone?: string };
     items: Array<{ id: string; price: number; quantity: number; name: string }>;
   }): Promise<MidtransTransactionResult> {
-    const serverKey = this.config.get<string>('MIDTRANS_SERVER_KEY');
+    const serverKey = this.config.get<string>('MIDTRANS_SERVER_KEY')?.trim();
     if (!serverKey) {
       this.logger.warn(
         'MIDTRANS_SERVER_KEY not configured, returning mock token',
@@ -33,9 +33,7 @@ export class MidtransService {
       };
     }
 
-    const url =
-      this.config.get<string>('MIDTRANS_SNAP_URL')?.trim() ||
-      'https://app.sandbox.midtrans.com/snap/v1/transactions';
+    const url = this.resolveSnapUrl(serverKey);
 
     const requestBody = {
       transaction_details: {
@@ -77,6 +75,41 @@ export class MidtransService {
       );
       throw normalizedError;
     }
+  }
+
+  private resolveSnapUrl(serverKey: string): string {
+    const configuredUrl = this.config.get<string>('MIDTRANS_SNAP_URL')?.trim();
+    const derivedUrl = this.isSandboxServerKey(serverKey)
+      ? 'https://app.sandbox.midtrans.com/snap/v1/transactions'
+      : 'https://app.midtrans.com/snap/v1/transactions';
+
+    if (!configuredUrl) {
+      return derivedUrl;
+    }
+
+    const configuredEnv = this.isSandboxUrl(configuredUrl)
+      ? 'sandbox'
+      : 'production';
+    const keyEnv = this.isSandboxServerKey(serverKey)
+      ? 'sandbox'
+      : 'production';
+
+    if (configuredEnv !== keyEnv) {
+      this.logger.warn(
+        `MIDTRANS_SNAP_URL points to ${configuredEnv} but server key indicates ${keyEnv}. defaulting to ${keyEnv} endpoint to prevent 401 errors.`,
+      );
+      return derivedUrl;
+    }
+
+    return configuredUrl;
+  }
+
+  private isSandboxServerKey(serverKey: string): boolean {
+    return serverKey.trim().startsWith('SB-');
+  }
+
+  private isSandboxUrl(url: string): boolean {
+    return /\.sandbox\./i.test(url);
   }
 
   private safeStringify(value: unknown): string {
