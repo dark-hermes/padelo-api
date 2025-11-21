@@ -34,7 +34,14 @@ export class CartService {
       return await this.prisma.cartItem.update({
         where: { id: existing.id },
         data: { quantity: existing.quantity + qty },
-        include: { productVariant: true },
+        include: {
+          productVariant: {
+            include: {
+              product: true,
+              images: true,
+            },
+          },
+        },
       });
     }
 
@@ -44,7 +51,14 @@ export class CartService {
         productVariantId: dto.productVariantId,
         quantity: qty,
       },
-      include: { productVariant: true },
+      include: {
+        productVariant: {
+          include: {
+            product: true,
+            images: true,
+          },
+        },
+      },
     });
   }
 
@@ -52,7 +66,14 @@ export class CartService {
     return await this.prisma.cartItem.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: { productVariant: true },
+      include: {
+        productVariant: {
+          include: {
+            product: true,
+            images: true,
+          },
+        },
+      },
     });
   }
 
@@ -71,7 +92,14 @@ export class CartService {
     return await this.prisma.cartItem.update({
       where: { id },
       data,
-      include: { productVariant: true },
+      include: {
+        productVariant: {
+          include: {
+            product: true,
+            images: true,
+          },
+        },
+      },
     });
   }
 
