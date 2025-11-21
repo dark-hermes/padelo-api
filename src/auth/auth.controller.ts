@@ -106,8 +106,22 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<SuccessResponseDto> {
     await this.authService.logout(req.user.id);
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    const isProd = process.env.NODE_ENV === 'production';
+    const sameSiteOption: CookieOptions['sameSite'] = isProd ? 'none' : 'lax';
+
+    // Clear cookies using the same attributes used when setting them so
+    // browsers will accept the deletion (domain/path/samesite/secure must
+    // match the original cookie attributes).
+    res.clearCookie('access_token', {
+      path: '/',
+      sameSite: sameSiteOption,
+      secure: isProd,
+    });
+    res.clearCookie('refresh_token', {
+      path: '/',
+      sameSite: sameSiteOption,
+      secure: isProd,
+    });
 
     return {
       message: 'Logged out successfully.',
@@ -122,8 +136,19 @@ export class AuthController {
     description: 'Session cleared successfully',
   })
   clearSession(@Res({ passthrough: true }) res: Response): SuccessResponseDto {
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    const isProd = process.env.NODE_ENV === 'production';
+    const sameSiteOption: CookieOptions['sameSite'] = isProd ? 'none' : 'lax';
+
+    res.clearCookie('access_token', {
+      path: '/',
+      sameSite: sameSiteOption,
+      secure: isProd,
+    });
+    res.clearCookie('refresh_token', {
+      path: '/',
+      sameSite: sameSiteOption,
+      secure: isProd,
+    });
 
     return {
       message: 'Session cleared successfully.',

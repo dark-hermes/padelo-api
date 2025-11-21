@@ -28,6 +28,7 @@ async function bootstrap() {
         .filter(Boolean)
     : [];
 
+  console.log('Allowed Origins:', allowedOrigins);
   let corsOrigin: boolean | string | string[];
   if (allowedOrigins.length === 0) {
     corsOrigin = process.env.NODE_ENV === 'production' ? true : '*';
