@@ -14,10 +14,32 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Configure CORS with credentials support. When using credentialed
+  // requests (cookies) the Access-Control-Allow-Origin header must be
+  // a specific origin (not '*'). Support a comma-separated
+  // ALLOWED_ORIGINS env var. If none provided, in production we reflect
+  // the incoming origin (so the browser receives a specific origin
+  // header) while in non-production we allow all origins for convenience.
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+  const allowedOrigins = allowedOriginsEnv
+    ? allowedOriginsEnv
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
+  let corsOrigin: boolean | string | string[];
+  if (allowedOrigins.length === 0) {
+    corsOrigin = process.env.NODE_ENV === 'production' ? true : '*';
+  } else if (allowedOrigins.length === 1 && allowedOrigins[0] === '*') {
+    // If explicitly '*' is provided, reflect origin (same as true)
+    corsOrigin = true;
+  } else {
+    corsOrigin = allowedOrigins;
+  }
+
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : '*',
+    origin: corsOrigin,
     credentials: true,
   });
 
