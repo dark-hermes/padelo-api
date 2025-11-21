@@ -21,3 +21,19 @@ padelo.kebunify.my.id {
   # Simple health endpoint for external checks
   respond /health 200
 }
+
+cek-resi.kebunify.my.id {
+  encode gzip zstd
+  header {
+    -Server
+    X-Frame-Options "DENY"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "no-referrer"
+    X-XSS-Protection "0"
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  }
+
+  reverse_proxy cek-resi:8001 {
+    # Caddy forwards necessary headers by default
+  }
+}
