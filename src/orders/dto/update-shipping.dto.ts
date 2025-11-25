@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateShippingDto {
-  @ApiProperty({ description: 'Courier name (e.g. JNE REG)' })
+  @ApiProperty({ description: 'Courier name (e.g. JNE REG)', required: false })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  courier: string;
+  courier?: string;
 
   @ApiProperty({ description: 'Tracking / airway bill number' })
   @IsString()

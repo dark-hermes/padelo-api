@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -8,21 +9,25 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { OrderStatus } from '@prisma/client';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CheckAbilities } from 'src/casl/abilities.decorator';
 import { AbilitiesGuard } from 'src/casl/abilities.guard';
 import { Action } from 'src/casl/casl-ability.factory';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
 import { MidtransNotificationDto } from './dto/midtrans-notification.dto';
 import { ShippingOptionsDto } from './dto/shipping-options.dto';
 import { UpdateShippingDto } from './dto/update-shipping.dto';
@@ -71,9 +76,21 @@ export class OrdersController {
   @Get('me')
   @UseGuards(JwtAuthGuard, AbilitiesGuard)
   @ApiOperation({ summary: 'List order milik user saat ini' })
-  async getMyOrders(@Req() req: RequestWithUser) {
+  async getMyOrders(
+    @Req() req: RequestWithUser,
+    @Query('status') status?: OrderStatus,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const user = this.ensureUser(req);
-    return await this.ordersService.getMyOrders(user.id);
+    const pageNum = page ? Number(page) : undefined;
+    const limitNum = limit ? Number(limit) : undefined;
+    return await this.ordersService.getMyOrders(
+      user.id,
+      status,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Get('tracking/:trackingNumber')
@@ -82,15 +99,37 @@ export class OrdersController {
     summary: 'Tracking status pengiriman berdasarkan nomor resi',
   })
   async trackOrder(@Param('trackingNumber') trackingNumber: string) {
-    return await this.ordersService.trackShipment(trackingNumber);
+    const tn = (trackingNumber || '').toString().trim();
+    if (!tn) {
+      throw new BadRequestException('trackingNumber is required');
+    }
+    return await this.ordersService.trackShipment(tn);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, AbilitiesGuard)
   @CheckAbilities({ action: Action.Manage, subject: 'all' })
   @ApiOperation({ summary: 'List seluruh order (admin)' })
-  async getAllOrders() {
-    return await this.ordersService.getAllOrders();
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    type: String,
+    description: 'Search query',
+  })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'sortOrder', required: false, type: String })
+  async getAllOrders(@Query() dto: GetOrdersQueryDto) {
+    return await this.ordersService.getAllOrdersAdmin({
+      page: dto.page ? Number(dto.page) : undefined,
+      limit: dto.limit ? Number(dto.limit) : undefined,
+      q: dto.q,
+      status: dto.status,
+      sortBy: dto.sortBy,
+      sortOrder: dto.sortOrder,
+    });
   }
 
   @Get(':id')
@@ -120,6 +159,32 @@ export class OrdersController {
   ) {
     const order = await this.ordersService.updateShipping(id, dto);
     return { message: 'Informasi pengiriman diperbarui.', order };
+  }
+
+  @Get('admin/:id')
+  @UseGuards(JwtAuthGuard, AbilitiesGuard)
+  @CheckAbilities({ action: Action.Manage, subject: 'all' })
+  @ApiOperation({ summary: 'Admin: get order detail by id' })
+  async getOrderByIdAdmin(@Param('id') id: string) {
+    return await this.ordersService.getOrderByIdAdmin(id);
+  }
+
+  @Patch(':id/confirm')
+  @UseGuards(JwtAuthGuard, AbilitiesGuard)
+  @CheckAbilities({ action: Action.Manage, subject: 'all' })
+  @ApiOperation({ summary: 'Admin: confirm PAID order to PROCESSING' })
+  async confirmOrder(@Param('id') id: string) {
+    const order = await this.ordersService.confirmOrderToProcessing(id);
+    return { message: 'Order dikonfirmasi dan sedang diproses.', order };
+  }
+
+  @Patch(':id/complete')
+  @UseGuards(JwtAuthGuard, AbilitiesGuard)
+  @CheckAbilities({ action: Action.Manage, subject: 'all' })
+  @ApiOperation({ summary: 'Admin: mark SHIPPED order as COMPLETED' })
+  async completeOrder(@Param('id') id: string) {
+    const order = await this.ordersService.completeOrder(id);
+    return { message: 'Order ditandai COMPLETED.', order };
   }
 
   @Post('midtrans/notification')

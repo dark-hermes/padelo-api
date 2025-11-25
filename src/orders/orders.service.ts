@@ -195,7 +195,15 @@ export class OrdersService {
             })),
           },
         },
-        include: { items: true },
+        include: {
+          items: {
+            include: {
+              productVariant: {
+                include: { images: true, product: true },
+              },
+            },
+          },
+        },
       });
 
       for (const item of summary.items) {
@@ -248,31 +256,148 @@ export class OrdersService {
     const updatedOrder = await this.prisma.order.update({
       where: { id: order.id },
       data: { paymentToken: payment.token },
-      include: { items: true },
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
+      },
     });
 
     return { order: updatedOrder, payment };
   }
 
-  async getMyOrders(userId: string) {
-    return await this.prisma.order.findMany({
-      where: { userId },
-      include: { items: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getMyOrders(userId: string, status?: OrderStatus, page = 1, limit = 5) {
+    const where: Prisma.OrderWhereInput = { userId };
+    if (status) {
+      where.status = status;
+    }
+
+    const take = Math.max(1, Number(limit) || 5);
+    const pageNum = Math.max(1, Number(page) || 1);
+    const skip = (pageNum - 1) * take;
+
+    const [total, orders] = await Promise.all([
+      this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            include: {
+              productVariant: { include: { images: true, product: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+
+    return {
+      data: orders,
+      meta: { total, page: pageNum, limit: take },
+    };
   }
 
   async getAllOrders() {
     return await this.prisma.order.findMany({
-      include: { items: true },
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getAllOrdersAdmin(
+    params: {
+      page?: number;
+      limit?: number;
+      q?: string;
+      status?: OrderStatus;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    } = {},
+  ) {
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.max(1, Number(params.limit) || 10);
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.OrderWhereInput = {};
+    if (params.status) where.status = params.status;
+
+    const q = params.q?.trim();
+    if (q && q.length) {
+      where.OR = [
+        { invoiceNumber: { contains: q, mode: 'insensitive' } },
+        { shippingName: { contains: q, mode: 'insensitive' } },
+        {
+          items: {
+            some: { productName: { contains: q, mode: 'insensitive' } },
+          },
+        },
+      ];
+    }
+
+    const orderBy: Prisma.OrderOrderByWithRelationInput = {};
+    const sortBy = params.sortBy?.trim() || 'createdAt';
+    const sortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc';
+    // only allow some safe fields
+    const allowed = new Set([
+      'createdAt',
+      'totalAmount',
+      'status',
+      'shippingName',
+    ]);
+    if (allowed.has(sortBy)) {
+      const orderByRecord: Record<string, Prisma.SortOrder> = {};
+      orderByRecord[sortBy] = sortOrder as Prisma.SortOrder;
+      Object.assign(orderBy, orderByRecord);
+    } else {
+      orderBy.createdAt = 'desc';
+    }
+
+    const [totalItems, data] = await Promise.all([
+      this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            include: {
+              productVariant: { include: { images: true, product: true } },
+            },
+          },
+          user: { select: { id: true, name: true, email: true } },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+
+    return {
+      data,
+      meta: { totalItems, page, limit, totalPages },
+    };
   }
 
   async getOrderDetail(orderId: string, userId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true },
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
+      },
     });
 
     if (!order) {
@@ -286,11 +411,63 @@ export class OrdersService {
     return order;
   }
 
+  async getOrderByIdAdmin(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order tidak ditemukan.');
+    }
+
+    return order;
+  }
+
+  async confirmOrderToProcessing(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) throw new NotFoundException('Order tidak ditemukan.');
+
+    if (order.status !== OrderStatus.PAID) {
+      throw new BadRequestException(
+        'Hanya order dengan status PAID yang dapat dikonfirmasi.',
+      );
+    }
+
+    return await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.PROCESSING },
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
   async cancelOrder(orderId: string, userId: string) {
     return await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { items: true },
+        include: {
+          items: {
+            include: {
+              productVariant: { include: { images: true, product: true } },
+            },
+          },
+        },
       });
 
       if (!order || order.userId !== userId) {
@@ -312,7 +489,13 @@ export class OrdersService {
       return await tx.order.update({
         where: { id: order.id },
         data: { status: OrderStatus.CANCELLED },
-        include: { items: true },
+        include: {
+          items: {
+            include: {
+              productVariant: { include: { images: true, product: true } },
+            },
+          },
+        },
       });
     });
   }
@@ -333,14 +516,51 @@ export class OrdersService {
       throw new BadRequestException('Order belum bisa dikirim.');
     }
 
+    const updateData: Record<string, unknown> = {
+      shippingResi: dto.trackingNumber,
+      status: OrderStatus.SHIPPED,
+    };
+
+    if (dto.courier && String(dto.courier).trim().length) {
+      updateData['shippingCourier'] = dto.courier;
+    }
+
     return await this.prisma.order.update({
       where: { id: order.id },
-      data: {
-        shippingCourier: dto.courier,
-        shippingResi: dto.trackingNumber,
-        status: OrderStatus.SHIPPED,
+      data: updateData,
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
       },
-      include: { items: true },
+    });
+  }
+
+  async completeOrder(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) throw new NotFoundException('Order tidak ditemukan.');
+
+    if (order.status !== OrderStatus.SHIPPED) {
+      throw new BadRequestException(
+        'Hanya order dengan status SHIPPED yang dapat diselesaikan.',
+      );
+    }
+
+    return await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.COMPLETED },
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { images: true, product: true } },
+          },
+        },
+        user: { select: { id: true, name: true, email: true } },
+      },
     });
   }
 
