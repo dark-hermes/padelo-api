@@ -46,6 +46,7 @@
     "cookie-parser": "^1.4.7",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
+    "midtrans-client": "^1.4.3",
     "multer": "^2.0.2",
     "nestjs-pino": "^4.4.1",
     "passport": "^0.7.0",

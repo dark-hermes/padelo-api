@@ -1,6 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
+import * as Midtrans from 'midtrans-client';
+
+// Minimal typed surface for the parts of `midtrans-client` we use.
+type MidtransSnapInstance = {
+  createTransaction: (
+    parameter: unknown,
+  ) => Promise<{ token?: string; redirect_url?: string }>;
+  createTransactionToken: (parameter: unknown) => Promise<string>;
+};
+
+type MidtransModule = {
+  Snap: new (cfg: {
+    isProduction: boolean;
+    serverKey: string;
+    clientKey?: string;
+  }) => MidtransSnapInstance;
+};
 
 export interface MidtransTransactionResult {
   token: string;
@@ -33,47 +50,93 @@ export class MidtransService {
       };
     }
 
-    const url = this.resolveSnapUrl(serverKey);
-
-    const requestBody = {
-      transaction_details: {
-        order_id: payload.orderId,
-        gross_amount: payload.grossAmount,
-      },
-      item_details: payload.items.map((item) => ({
-        id: item.id,
-        price: item.price,
-        quantity: item.quantity,
-        name: item.name.slice(0, 50),
-      })),
-      customer_details: {
-        first_name: payload.customer.name,
-        email: payload.customer.email,
-        phone: payload.customer.phone,
-      },
-    };
-
+    // Prefer using official midtrans-client Snap wrapper when available
     try {
-      const auth = Buffer.from(`${serverKey}:`).toString('base64');
-      const response = await this.http.post<MidtransTransactionResult>(
-        url,
-        requestBody,
-        {
-          headers: {
-            Authorization: `Basic ${auth}`,
-            'Content-Type': 'application/json',
-          },
+      const isProduction = !this.isSandboxServerKey(serverKey);
+      const clientKey = this.config.get<string>('MIDTRANS_CLIENT_KEY')?.trim();
+
+      const MidtransTyped = Midtrans as unknown as MidtransModule;
+      const snap = new MidtransTyped.Snap({
+        isProduction,
+        serverKey,
+        clientKey: clientKey ?? undefined,
+      });
+
+      const parameter = {
+        transaction_details: {
+          order_id: payload.orderId,
+          gross_amount: payload.grossAmount,
         },
+        item_details: payload.items.map((item) => ({
+          id: item.id,
+          price: Math.round(item.price),
+          quantity: item.quantity,
+          name: item.name.slice(0, 50),
+        })),
+        customer_details: {
+          first_name: payload.customer.name,
+          email: payload.customer.email,
+          phone: payload.customer.phone,
+        },
+      };
+
+      // createTransaction returns an object containing token and redirect_url
+      console.log(`Parameter: ${JSON.stringify(parameter)}`);
+      const res = await snap.createTransaction(parameter);
+
+      const token =
+        res?.token ?? (await snap.createTransactionToken(parameter));
+      const redirect_url = res?.redirect_url ?? null;
+      console.log(`Created Midtrans transaction: ${token} / ${redirect_url}`);
+      return { token, redirect_url } as MidtransTransactionResult;
+    } catch {
+      // If requiring midtrans-client failed for some reason, fallback to manual HTTP
+      this.logger.debug(
+        'midtrans-client unavailable, falling back to HTTP API',
       );
-      return response.data;
-    } catch (error: unknown) {
-      const normalizedError =
-        error instanceof Error ? error : new Error(this.safeStringify(error));
-      this.logger.error(
-        'Failed to create Midtrans transaction',
-        normalizedError.message,
-      );
-      throw normalizedError;
+
+      const url = this.resolveSnapUrl(serverKey);
+
+      const requestBody = {
+        transaction_details: {
+          order_id: payload.orderId,
+          gross_amount: payload.grossAmount,
+        },
+        item_details: payload.items.map((item) => ({
+          id: item.id,
+          price: Math.round(item.price),
+          quantity: item.quantity,
+          name: item.name.slice(0, 50),
+        })),
+        customer_details: {
+          first_name: payload.customer.name,
+          email: payload.customer.email,
+          phone: payload.customer.phone,
+        },
+      };
+
+      try {
+        const auth = Buffer.from(`${serverKey}:`).toString('base64');
+        const response = await this.http.post<MidtransTransactionResult>(
+          url,
+          requestBody,
+          {
+            headers: {
+              Authorization: `Basic ${auth}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+        return response.data;
+      } catch (error: unknown) {
+        const normalizedError =
+          error instanceof Error ? error : new Error(this.safeStringify(error));
+        this.logger.error(
+          'Failed to create Midtrans transaction (HTTP fallback)',
+          normalizedError.message,
+        );
+        throw normalizedError;
+      }
     }
   }
 

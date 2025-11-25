@@ -62,6 +62,9 @@ importers:
       helmet:
         specifier: ^8.1.0
         version: 8.1.0
+      midtrans-client:
+        specifier: ^1.4.3
+        version: 1.4.3
       multer:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2685,6 +2688,9 @@ packages:
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
+
+  midtrans-client@1.4.3:
+    resolution: {integrity: sha512-2oNEYgD8+FeUIOE5rUnLmqacbh3GHWvq+xKmL3dS4ZgCAiD5uzQQrKOz7tJ+7OOi3TbHDD8POLI2D6/xzQMCxw==}
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -6587,6 +6593,13 @@ snapshots:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.1
+
+  midtrans-client@1.4.3:
+    dependencies:
+      axios: 1.13.2
+      lodash: 4.17.21
+    transitivePeerDependencies:
+      - debug
 
   mime-db@1.52.0: {}
 
