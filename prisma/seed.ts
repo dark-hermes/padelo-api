@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -59,41 +59,6 @@ async function main() {
     { action: 'read', subject: 'ProductImage' },
     { action: 'update', subject: 'ProductImage' },
     { action: 'delete', subject: 'ProductImage' },
-    // Address Permissions
-    { action: 'create', subject: 'Address' },
-    { action: 'read', subject: 'Address' },
-    { action: 'update', subject: 'Address' },
-    { action: 'delete', subject: 'Address' },
-    // Order Permissions
-    { action: 'create', subject: 'Order' },
-    { action: 'read', subject: 'Order' },
-    { action: 'update', subject: 'Order' },
-    { action: 'delete', subject: 'Order' },
-    // CartItem Permissions
-    { action: 'create', subject: 'CartItem' },
-    { action: 'read', subject: 'CartItem' },
-    { action: 'update', subject: 'CartItem' },
-    { action: 'delete', subject: 'CartItem' },
-    // OrderItem Permissions
-    { action: 'create', subject: 'OrderItem' },
-    { action: 'read', subject: 'OrderItem' },
-    { action: 'update', subject: 'OrderItem' },
-    { action: 'delete', subject: 'OrderItem' },
-    // Setting Permissions
-    { action: 'create', subject: 'Setting' },
-    { action: 'read', subject: 'Setting' },
-    { action: 'update', subject: 'Setting' },
-    { action: 'delete', subject: 'Setting' },
-    // Team Permissions
-    { action: 'create', subject: 'Team' },
-    { action: 'read', subject: 'Team' },
-    { action: 'update', subject: 'Team' },
-    { action: 'delete', subject: 'Team' },
-    // Landing Permissions
-    { action: 'create', subject: 'Landing' },
-    { action: 'read', subject: 'Landing' },
-    { action: 'update', subject: 'Landing' },
-    { action: 'delete', subject: 'Landing' },
     // Additional permissions can be added here
 
     // All permission (for admin)
@@ -126,38 +91,6 @@ async function main() {
   //     data: { roleId: userRole.id, permissionId: readUserPermission.id },
   //   });
   // }
-
-  // All read permissions for USER role
-  const readPermissions = allPermissions.filter((p) => p.action === 'read');
-  for (const perm of readPermissions) {
-    await prisma.rolePermission.create({
-      data: { roleId: userRole.id, permissionId: perm.id },
-    });
-  }
-
-  // CRUD permission for addresses for USER role
-  const addressPermissions = allPermissions.filter(
-    (p) =>
-      p.subject === 'Address' &&
-      ['create', 'update', 'delete'].includes(p.action),
-  );
-  for (const perm of addressPermissions) {
-    await prisma.rolePermission.create({
-      data: { roleId: userRole.id, permissionId: perm.id },
-    });
-  }
-
-  // CRUD permission for orders for USER role
-  const orderPermissions = allPermissions.filter(
-    (p) =>
-      p.subject === 'Order' &&
-      ['create', 'update', 'delete'].includes(p.action),
-  );
-  for (const perm of orderPermissions) {
-    await prisma.rolePermission.create({
-      data: { roleId: userRole.id, permissionId: perm.id },
-    });
-  }
 
   // 5. Create users
   const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com';
@@ -565,6 +498,177 @@ async function main() {
   let landing: { title?: string } | null = null;
 
   if (hasLanding(prisma)) {
+    // Copy landing images from public/landing -> uploads/landing/ and prepare data
+    const publicLandingDir = path.join(process.cwd(), 'public', 'landing');
+    const uploadsLandingDir = path.join(process.cwd(), 'uploads', 'landing');
+    const publicLandingVideoDir = path.join(process.cwd(), 'public', 'landing');
+    const uploadsLandingVideoDir = path.join(
+      process.cwd(),
+      'uploads',
+      'landing',
+    );
+
+    // Ensure uploads/landing directory exists
+    try {
+      await fs.mkdir(uploadsLandingDir, { recursive: true });
+      await fs.mkdir(uploadsLandingVideoDir, { recursive: true });
+    } catch {
+      // ignore
+    }
+
+    // Check if public/landing exists and get files
+    let landingPublicExists = true;
+    let landingPublicFiles: string[] = [];
+    try {
+      await fs.access(publicLandingDir);
+      landingPublicFiles = await fs.readdir(publicLandingDir);
+    } catch {
+      landingPublicExists = false;
+    }
+
+    const landingImagesData: Array<{
+      url: string;
+      title: string;
+      description: string | null;
+      price: string;
+    }> = [];
+
+    // Expected landing image filenames
+    const landingImageNames = ['black-round', 'pink-round', 'white-round'];
+
+    for (const imageName of landingImageNames) {
+      let foundFile: string | null = null;
+
+      if (landingPublicExists && landingPublicFiles.length > 0) {
+        const landingFilesLC = landingPublicFiles.map((f) => f.toLowerCase());
+
+        // Try to find file with any supported extension
+        for (const ext of possibleExts) {
+          const filename = `${imageName}.${ext}`;
+          const idx = landingFilesLC.indexOf(filename);
+          if (idx !== -1) {
+            foundFile = landingPublicFiles[idx];
+            break;
+          }
+        }
+      }
+
+      if (foundFile) {
+        // Copy file from public to uploads
+        const src = path.join(publicLandingDir, foundFile);
+        const ext = path.extname(foundFile);
+        const destFilename = `${imageName}${ext}`;
+        const dest = path.join(uploadsLandingDir, destFilename);
+
+        try {
+          await fs.copyFile(src, dest);
+          landingImagesData.push({
+            url: `/uploads/landing/${destFilename}`,
+            title: `${imageName.charAt(0).toUpperCase() + imageName.slice(1)} image`,
+            description: null,
+            price: '75600',
+          });
+        } catch (copyErr) {
+          console.warn(`Failed to copy ${src} -> ${dest}:`, copyErr);
+          // Fallback to original path
+          landingImagesData.push({
+            url: `/landing/${foundFile}`,
+            title: `${imageName.charAt(0).toUpperCase() + imageName.slice(1)} image`,
+            description: null,
+            price: '75600',
+          });
+        }
+      } else {
+        // No file found, use fallback CDN path
+        landingImagesData.push({
+          url: `/uploads/landing/${imageName}.webp`,
+          title: `${imageName.charAt(0).toUpperCase() + imageName.slice(1)} image`,
+          description: null,
+          price: '75600',
+        });
+      }
+    }
+
+    // Map variant data to landing images with proper names and prices
+    const landingImagesWithData = landingImagesData.map((img, idx) => {
+      // Get corresponding variant for price and name
+      const variant = createdVariants[idx % createdVariants.length];
+      return {
+        url: img.url,
+        title: variant.name ?? img.title,
+        description: `${product.name} - ${variant.name}`,
+        price: variant.price.toString(),
+      };
+    });
+
+    // Handle landing videos
+    const landingVideosData: Array<{
+      url: string;
+      title: string;
+    }> = [];
+
+    // Check if public/landing/videos exists and get video files
+    let videoPublicExists = true;
+    let videoPublicFiles: string[] = [];
+    try {
+      await fs.access(publicLandingVideoDir);
+      videoPublicFiles = await fs.readdir(publicLandingVideoDir);
+    } catch {
+      videoPublicExists = false;
+    }
+
+    const videoExts = ['webm', 'mov', 'avi'];
+    const expectedVideoNames = ['video1'];
+
+    for (const videoName of expectedVideoNames) {
+      let foundVideo: string | null = null;
+
+      if (videoPublicExists && videoPublicFiles.length > 0) {
+        const videoFilesLC = videoPublicFiles.map((f) => f.toLowerCase());
+
+        // Try to find video file with any supported extension
+        for (const ext of videoExts) {
+          const filename = `${videoName}.${ext}`;
+          const idx = videoFilesLC.indexOf(filename);
+          if (idx !== -1) {
+            foundVideo = videoPublicFiles[idx];
+            break;
+          }
+        }
+      }
+
+      if (foundVideo) {
+        // Copy video from public to uploads
+        const src = path.join(publicLandingVideoDir, foundVideo);
+        const ext = path.extname(foundVideo);
+        const destFilename = `${videoName}${ext}`;
+        const dest = path.join(uploadsLandingVideoDir, destFilename);
+
+        try {
+          await fs.copyFile(src, dest);
+          landingVideosData.push({
+            url: `/uploads/landing/${destFilename}`,
+            title: `${videoName.charAt(0).toUpperCase() + videoName.slice(1)} video`,
+          });
+        } catch (copyErr) {
+          console.warn(`Failed to copy video ${src} -> ${dest}:`, copyErr);
+          // Fallback to original path
+          landingVideosData.push({
+            url: `/landing/${foundVideo}`,
+            title: `${videoName.charAt(0).toUpperCase() + videoName.slice(1)} video`,
+          });
+        }
+      }
+    }
+
+    // If no videos found, use fallback
+    if (landingVideosData.length === 0) {
+      landingVideosData.push({
+        url: 'https://youtu.be/abcd',
+        title: 'Intro video',
+      });
+    }
+
     landing = await prisma.landing.create({
       data: {
         title: 'Welcome to Padelo',
@@ -572,30 +676,42 @@ async function main() {
         reviews: {
           create: [
             {
-              name: 'John Doe',
-              comment: 'Amazing service!',
+              name: 'Ahmad Rizky',
+              comment:
+                'Warna pink-nya cantik banget! Sangat membantu saat latihan, tidak perlu repot membungkuk lagi. Kualitas lem sangat kuat, sudah pakai 3 bulan masih oke.',
+              rating: 5,
+            },
+            {
+              name: 'Sarah Wijaya',
+              comment:
+                'Ball picker warna hitam terlihat elegan dan profesional. Pas banget dipasang di raket padel saya. Sangat membantu menghemat waktu dan tenaga!',
+              rating: 5,
+            },
+            {
+              name: 'Budi Santoso',
+              comment:
+                'Lem perekatnya kuat sekali, tidak mudah lepas meski digunakan intensif. Sangat membantu terutama saat latihan sendiri. Highly recommended!',
+              rating: 5,
+            },
+            {
+              name: 'Linda Kusuma',
+              comment:
+                'Ball picker warna putih bersih dan mudah dilihat. Ukurannya pas dengan raket padel standar, tidak mengganggu permainan. Sangat praktis dan membantu!',
+              rating: 5,
+            },
+            {
+              name: 'Dimas Prasetyo',
+              comment:
+                'Produk yang sangat membantu! Kualitaslem sangat baik, sudah pakai berbulan-bulan masih menempel erat. Cocok untuk semua warna raket padel. Worth it!',
               rating: 5,
             },
           ],
         },
         imagesProduct: {
-          create: [
-            {
-              url: '/uploads/landing/image1.jpg',
-              title: 'Hero image',
-              description: null,
-              // price is required in the model; use 0.00 as default
-              price: '0.00',
-            },
-          ],
+          create: landingImagesWithData,
         },
         videos: {
-          create: [
-            {
-              url: 'https://youtu.be/abcd',
-              title: 'Intro video',
-            },
-          ],
+          create: landingVideosData,
         },
       },
       include: { reviews: true, imagesProduct: true, videos: true },
