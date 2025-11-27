@@ -768,6 +768,85 @@ export class OrdersService {
     return this.normalizeTrackingPayload(sanitized, raw);
   }
 
+  // Admin dashboard statistics: order counts by status, latest orders, and revenue
+  async getDashboardStats() {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [paidCount, shippedCount, completedCount] = await Promise.all([
+      this.prisma.order.count({ where: { status: OrderStatus.PAID } }),
+      this.prisma.order.count({ where: { status: OrderStatus.SHIPPED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.COMPLETED } }),
+    ]);
+
+    const latestOrders = await this.prisma.order.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: { take: 3 },
+      },
+    });
+
+    const weekly = await this.prisma.order.aggregate({
+      where: { paidAt: { gte: sevenDaysAgo } },
+      _sum: { totalProductAmount: true },
+    });
+
+    const monthly = await this.prisma.order.aggregate({
+      where: { paidAt: { gte: thirtyDaysAgo } },
+      _sum: { totalProductAmount: true },
+    });
+
+    const weeklyNet = Number(weekly._sum.totalProductAmount ?? 0);
+    const monthlyNet = Number(monthly._sum.totalProductAmount ?? 0);
+
+    // Build daily revenue timeseries for the past 30 days (date string YYYY-MM-DD)
+    const days = 30;
+    const startDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    startDate.setDate(startDate.getDate() - (days - 1));
+
+    const ordersInRange = await this.prisma.order.findMany({
+      where: { paidAt: { gte: startDate } },
+      select: { paidAt: true, totalProductAmount: true },
+    });
+
+    const map = new Map<string, number>();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      map.set(key, 0);
+    }
+
+    for (const o of ordersInRange) {
+      if (!o.paidAt) continue;
+      const key = o.paidAt.toISOString().slice(0, 10);
+      const prev = map.get(key) ?? 0;
+      map.set(key, prev + Number(o.totalProductAmount ?? 0));
+    }
+
+    const revenueTimeseries = Array.from(map.entries()).map(
+      ([date, amount]) => ({ date, amount }),
+    );
+
+    return {
+      counts: {
+        paid: paidCount,
+        shipped: shippedCount,
+        completed: completedCount,
+      },
+      latestOrders,
+      revenue: { weeklyNet, monthlyNet },
+      revenueTimeseries,
+    };
+  }
+
   private normalizeTrackingPayload(trackingNumber: string, raw: unknown) {
     const root = this.asRecord(raw);
     if (!root) {

@@ -9,6 +9,9 @@ services:
       - NODE_ENV=production
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      # Persist uploads on the host so uploaded files survive container updates
+      - ./uploads:/usr/src/app/uploads:rw
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/v1 || exit 1"]
       interval: 30s

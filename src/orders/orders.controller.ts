@@ -132,6 +132,14 @@ export class OrdersController {
     });
   }
 
+  @Get('admin/dashboard')
+  @UseGuards(JwtAuthGuard, AbilitiesGuard)
+  @CheckAbilities({ action: Action.Manage, subject: 'all' })
+  @ApiOperation({ summary: 'Admin: dashboard statistics' })
+  async getDashboard() {
+    return await this.ordersService.getDashboardStats();
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, AbilitiesGuard)
   @ApiOperation({ summary: 'Detail order milik user' })
