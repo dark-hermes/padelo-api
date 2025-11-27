@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -59,6 +59,41 @@ async function main() {
     { action: 'read', subject: 'ProductImage' },
     { action: 'update', subject: 'ProductImage' },
     { action: 'delete', subject: 'ProductImage' },
+    // Address Permissions
+    { action: 'create', subject: 'Address' },
+    { action: 'read', subject: 'Address' },
+    { action: 'update', subject: 'Address' },
+    { action: 'delete', subject: 'Address' },
+    // Order Permissions
+    { action: 'create', subject: 'Order' },
+    { action: 'read', subject: 'Order' },
+    { action: 'update', subject: 'Order' },
+    { action: 'delete', subject: 'Order' },
+    // CartItem Permissions
+    { action: 'create', subject: 'CartItem' },
+    { action: 'read', subject: 'CartItem' },
+    { action: 'update', subject: 'CartItem' },
+    { action: 'delete', subject: 'CartItem' },
+    // OrderItem Permissions
+    { action: 'create', subject: 'OrderItem' },
+    { action: 'read', subject: 'OrderItem' },
+    { action: 'update', subject: 'OrderItem' },
+    { action: 'delete', subject: 'OrderItem' },
+    // Setting Permissions
+    { action: 'create', subject: 'Setting' },
+    { action: 'read', subject: 'Setting' },
+    { action: 'update', subject: 'Setting' },
+    { action: 'delete', subject: 'Setting' },
+    // Team Permissions
+    { action: 'create', subject: 'Team' },
+    { action: 'read', subject: 'Team' },
+    { action: 'update', subject: 'Team' },
+    { action: 'delete', subject: 'Team' },
+    // Landing Permissions
+    { action: 'create', subject: 'Landing' },
+    { action: 'read', subject: 'Landing' },
+    { action: 'update', subject: 'Landing' },
+    { action: 'delete', subject: 'Landing' },
     // Additional permissions can be added here
 
     // All permission (for admin)
@@ -91,6 +126,38 @@ async function main() {
   //     data: { roleId: userRole.id, permissionId: readUserPermission.id },
   //   });
   // }
+
+  // All read permissions for USER role
+  const readPermissions = allPermissions.filter((p) => p.action === 'read');
+  for (const perm of readPermissions) {
+    await prisma.rolePermission.create({
+      data: { roleId: userRole.id, permissionId: perm.id },
+    });
+  }
+
+  // CRUD permission for addresses for USER role
+  const addressPermissions = allPermissions.filter(
+    (p) =>
+      p.subject === 'Address' &&
+      ['create', 'update', 'delete'].includes(p.action),
+  );
+  for (const perm of addressPermissions) {
+    await prisma.rolePermission.create({
+      data: { roleId: userRole.id, permissionId: perm.id },
+    });
+  }
+
+  // CRUD permission for orders for USER role
+  const orderPermissions = allPermissions.filter(
+    (p) =>
+      p.subject === 'Order' &&
+      ['create', 'update', 'delete'].includes(p.action),
+  );
+  for (const perm of orderPermissions) {
+    await prisma.rolePermission.create({
+      data: { roleId: userRole.id, permissionId: perm.id },
+    });
+  }
 
   // 5. Create users
   const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com';
